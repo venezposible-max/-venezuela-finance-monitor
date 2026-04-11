@@ -78,6 +78,12 @@
         .switch.open { background: var(--green); color: #fff; box-shadow: 0 0 15px rgba(67, 181, 129, 0.3); }
         .switch.closed { background: rgba(255,255,255,0.05); color: var(--red); border-color: rgba(240, 71, 71, 0.2); }
         .switch:hover { transform: scale(1.05); }
+        .interval-box { display: flex; align-items: center; justify-content: space-between; background: var(--card); padding: 15px 25px; border-radius: 20px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05); }
+        .interval-box span { font-size: 13px; color: var(--subtext); font-weight: 600; text-transform: uppercase; }
+        .chips { display: flex; gap: 10px; }
+        .chip { padding: 8px 15px; border-radius: 12px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; transition: 0.3s; flex: none !important; width: auto !important; }
+        .chip.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 15px rgba(88, 101, 242, 0.3); }
+        .chip:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -90,6 +96,16 @@
         <div class="controls">
             <button id="btn-toggle" class="btn-start" onclick="toggleMonitor()">INICIAR MONITOR</button>
             <button class="btn-comment" onclick="toggleCommentArea()" style="background: rgba(255,255,255,0.05); flex: 0.3;">💬 NOTA</button>
+        </div>
+
+        <div class="interval-box">
+            <span>Ritmo de Reporte:</span>
+            <div class="chips">
+                <button class="chip active" data-min="5" onclick="updateInterval(5)">5m</button>
+                <button class="chip" data-min="10" onclick="updateInterval(10)">10m</button>
+                <button class="chip" data-min="30" onclick="updateInterval(30)">30m</button>
+                <button class="chip" data-min="60" onclick="updateInterval(60)">1h</button>
+            </div>
         </div>
 
         <div id="comment-area" style="display: none; margin-bottom: 30px; background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid var(--accent);">
@@ -285,6 +301,18 @@
                 document.getElementById('comment-text').value = '';
                 toggleCommentArea();
             }
+        }
+        function updateInterval(minutes) {
+            fetch('/api/interval', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ minutes })
+            }).then(r => r.json()).then(data => {
+                document.querySelectorAll('.chip').forEach(c => {
+                    c.classList.remove('active');
+                    if (c.getAttribute('data-min') == minutes) c.classList.add('active');
+                });
+            });
         }
     </script>
 </body>
