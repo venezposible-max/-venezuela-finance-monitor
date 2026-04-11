@@ -155,6 +155,10 @@ async function runMonitor() {
 🏢 <b>BDT:</b> ${monitorState.bankStatuses['BDT']}
 🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}
 
+⚠️ <b>COMISIONES (BDV/Tesoro):</b>
+• Intervención: 2.5%
+• Binance/GPay: 3.3% (Automático)
+
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
         `;
