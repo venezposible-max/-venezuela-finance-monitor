@@ -36,7 +36,7 @@
         .card .sub { font-size: 14px; color: var(--subtext); margin-top: 5px; }
 
         .controls { display: flex; gap: 15px; margin-bottom: 40px; }
-        button { flex: 1; padding: 18px; border-radius: 16px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; color: #fff; }
+        .controls button { flex: 1; padding: 18px; border-radius: 16px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; color: #fff; }
         .btn-start { background: var(--green); box-shadow: 0 4px 15px rgba(67, 181, 129, 0.3); }
         .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(67, 181, 129, 0.4); }
         .btn-stop { background: var(--red); box-shadow: 0 4px 15px rgba(240, 71, 11, 0.3); }
@@ -44,14 +44,33 @@
         button:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
         .banks { background: var(--card); padding: 30px; border-radius: 24px; margin-bottom: 30px; }
-        .bank-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .bank-row:last-child { border: none; }
-
-        .log-container { background: #000; border-radius: 24px; padding: 20px; height: 300px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #aaa; border: 1px solid rgba(255,255,255,0.05); }
-        .log-line { margin-bottom: 8px; line-height: 1.4; border-left: 2px solid var(--accent); padding-left: 10px; }
-        .log-time { color: var(--subtext); margin-right: 10px; }
-        .btn-mini { padding: 4px 10px; font-size: 11px; border-radius: 8px; flex: none; width: auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
-        .btn-mini:hover { background: var(--accent); }
+        .bank-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 12px 15px; 
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .switch { 
+            width: 100px; 
+            padding: 8px 0; 
+            border-radius: 20px; 
+            font-size: 10px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            border: 2px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+        .switch.open { background: var(--green); color: #fff; box-shadow: 0 0 15px rgba(67, 181, 129, 0.3); }
+        .switch.closed { background: rgba(255,255,255,0.05); color: var(--red); border-color: rgba(240, 71, 71, 0.2); }
+        .switch:hover { transform: scale(1.05); }
     </style>
 </head>
 <body>
