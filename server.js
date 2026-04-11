@@ -171,6 +171,21 @@ async function runMonitor() {
     const binance = await getBinanceRate();
     const telegram = await getTelegramData();
 
+    // Función para calcular arbitraje por banco
+    function calcReport(bcv, bin, bankName, comBank, comBin) {
+        const usdt = 100;
+        const bs = usdt * bin;
+        const usdBruto = bs / bcv;
+        const descBank = usdBruto * (comBank / 100);
+        const usdNeto = usdBruto - descBank;
+        const descBin = usdNeto * (comBin / 100);
+        const usdtFinal = usdNeto - descBin;
+        const ganancia = usdtFinal - usdt;
+        const pct = (ganancia / usdt * 100).toFixed(2);
+        const emoji = ganancia >= 0 ? '🟢' : '🔴';
+        return `${emoji} <b>${bankName}</b> (${comBank}%): ${usdtFinal.toFixed(2)} USDT → <b>+${ganancia.toFixed(2)} USDT (${pct}%)</b>`;
+    }
+
     if (binance > 0) {
         monitorState.binanceRate = binance;
         monitorState.bcvRate = telegram.rate;
@@ -197,16 +212,13 @@ async function runMonitor() {
 🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}
 💎 <b>Bancamiga:</b> ${monitorState.bankStatuses['BANCAMIGA']}
 
-⚠️ <b>COMISIONES (BDV/Tesoro):</b>
-• Comisión Bancaria: 2.5%
-• Binance: Gpay/Bpay: 3.3% (Automático)
-
-⚠️ <b>COMISIÓN BANCAMIGA:</b>
-• Comisión Bancaria: 5%
-• Binance: Gpay/Bpay: 3.3%
-
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
+
+🧮 <b>ARBITRAJE — Base 100 USDT</b>
+${calcReport(bcv, binance, 'BDV', 2.5, 3.3)}
+${calcReport(bcv, binance, 'Tesoro', 2.5, 3.3)}
+${calcReport(bcv, binance, 'Bancamiga', 5, 3.3)}
         `;
 
         await sendTelegramAlert(report);
