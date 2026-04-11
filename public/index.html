@@ -84,6 +84,24 @@
         .chip { padding: 8px 15px; border-radius: 12px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; transition: 0.3s; flex: none !important; width: auto !important; }
         .chip.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 15px rgba(88, 101, 242, 0.3); }
         .chip:hover { transform: translateY(-2px); }
+
+        /* Calculadora de Arbitraje */
+        .calc-box { background: var(--card); padding: 30px; border-radius: 24px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05); }
+        .calc-box h3 { color: var(--subtext); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
+        .calc-inputs { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .calc-inputs select, .calc-inputs input { flex: 1; min-width: 120px; padding: 12px 16px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 15px; font-family: inherit; font-weight: 600; }
+        .calc-inputs select:focus, .calc-inputs input:focus { outline: none; border-color: var(--accent); }
+        .calc-inputs select option { background: #1a1c25; color: #fff; }
+        .calc-btn { width: 100%; padding: 14px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), #7c3aed); border: none; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.3s; letter-spacing: 0.5px; }
+        .calc-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4); }
+        .calc-results { display: none; margin-top: 20px; }
+        .calc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        .calc-row:last-child { border: none; }
+        .calc-row .label { color: var(--subtext); }
+        .calc-row .val { font-weight: 700; }
+        .calc-row .val.profit { color: var(--green); font-size: 18px; }
+        .calc-row .val.loss { color: var(--red); font-size: 18px; }
+        .calc-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); margin: 15px 0; }
     </style>
 </head>
 <body>
@@ -188,6 +206,34 @@
                         <span class="slider"></span>
                     </label>
                 </div>
+            </div>
+        </div>
+
+        <!-- Calculadora de Arbitraje -->
+        <div class="calc-box">
+            <h3>🧮 Calculadora de Arbitraje</h3>
+            <div class="calc-inputs">
+                <select id="calc-bank">
+                    <option value="BDV">🇻🇪 BDV (2.5%)</option>
+                    <option value="TESORO">💰 Tesoro (2.5%)</option>
+                    <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
+                </select>
+                <input type="number" id="calc-usdt" placeholder="Cantidad USDT" value="100">
+            </div>
+            <button class="calc-btn" onclick="calcArbitrage()">CALCULAR GANANCIA</button>
+            <div id="calc-results" class="calc-results">
+                <div class="calc-row"><span class="label">Tasa Intervención (BCV)</span><span id="cr-bcv" class="val">---</span></div>
+                <div class="calc-row"><span class="label">Tasa Binance P2P</span><span id="cr-binance" class="val">---</span></div>
+                <div class="calc-divider"></div>
+                <div class="calc-row"><span class="label">💰 Recibes por Intervención (Bruto)</span><span id="cr-int-bruto" class="val">---</span></div>
+                <div class="calc-row"><span class="label">📉 Comisión Bancaria</span><span id="cr-com-bank" class="val" style="color:var(--red)">---</span></div>
+                <div class="calc-row"><span class="label">✅ Neto Intervención</span><span id="cr-int-neto" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-divider"></div>
+                <div class="calc-row"><span class="label">💰 Recibes por Binance (Bruto)</span><span id="cr-bin-bruto" class="val">---</span></div>
+                <div class="calc-row"><span class="label">📉 Comisión Binance: Gpay/Bpay</span><span id="cr-com-bin" class="val" style="color:var(--red)">---</span></div>
+                <div class="calc-row"><span class="label">✅ Neto Binance</span><span id="cr-bin-neto" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-divider"></div>
+                <div class="calc-row" style="padding: 15px 0;"><span class="label" style="font-size:16px; font-weight:700;">🏆 GANANCIA NETA</span><span id="cr-profit" class="val profit">---</span></div>
             </div>
         </div>
 
@@ -317,6 +363,71 @@
                 body: JSON.stringify({ minutes })
             });
         }
+
+        // Guardamos el estado global para la calculadora
+        let latestState = { bcvRate: 0, binanceRate: 0 };
+
+        // Comisiones por banco
+        const COMISIONES = {
+            BDV: { bancaria: 2.5, binance: 3.3 },
+            TESORO: { bancaria: 2.5, binance: 3.3 },
+            BANCAMIGA: { bancaria: 5, binance: 3.3 }
+        };
+
+        function calcArbitrage() {
+            const bank = document.getElementById('calc-bank').value;
+            const usdt = parseFloat(document.getElementById('calc-usdt').value) || 0;
+            const bcv = latestState.bcvRate || 0;
+            const bin = latestState.binanceRate || 0;
+            const com = COMISIONES[bank];
+
+            if (bcv === 0 || bin === 0) {
+                alert('⚠️ Inicia el monitor primero para obtener las tasas en vivo');
+                return;
+            }
+
+            // Brutos
+            const intBruto = usdt * bcv;
+            const binBruto = usdt * bin;
+
+            // Comisiones
+            const comBank = intBruto * (com.bancaria / 100);
+            const comBin = binBruto * (com.binance / 100);
+
+            // Netos
+            const intNeto = intBruto - comBank;
+            const binNeto = binBruto - comBin;
+
+            // Ganancia = Intervención Neto - Binance Neto (cuánto más ganas por intervención vs vender en Binance)
+            const profit = intNeto - binNeto;
+
+            // Mostrar resultados
+            document.getElementById('calc-results').style.display = 'block';
+            document.getElementById('cr-bcv').innerText = bcv.toFixed(2) + ' Bs';
+            document.getElementById('cr-binance').innerText = bin.toFixed(2) + ' Bs';
+            document.getElementById('cr-int-bruto').innerText = intBruto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+            document.getElementById('cr-com-bank').innerText = '-' + comBank.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs (' + com.bancaria + '%)';
+            document.getElementById('cr-int-neto').innerText = intNeto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+            document.getElementById('cr-bin-bruto').innerText = binBruto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+            document.getElementById('cr-com-bin').innerText = '-' + comBin.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs (' + com.binance + '%)';
+            document.getElementById('cr-bin-neto').innerText = binNeto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+            
+            const profitEl = document.getElementById('cr-profit');
+            if (profit >= 0) {
+                profitEl.innerText = '+' + profit.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+                profitEl.className = 'val profit';
+            } else {
+                profitEl.innerText = profit.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+                profitEl.className = 'val loss';
+            }
+        }
+
+        // Interceptar el updateUI para guardar el estado global
+        const _origUpdateUI = updateUI;
+        updateUI = function(state) {
+            latestState = state;
+            _origUpdateUI(state);
+        };
     </script>
 </body>
 </html>
