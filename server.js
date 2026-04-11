@@ -32,6 +32,7 @@ let monitorState = {
         'ACTIVO': 'CERRADO 🔴',
         'BANCAMIGA': 'CERRADO 🔴'
     },
+    manualOverrides: {}, 
     logs: []
 };
 
@@ -117,6 +118,15 @@ async function getTelegramData() {
             }
         }
 
+        // 3. Respetar Overrides Manuales (no sobrescribir si el usuario forzó el estado hace menos de 30min)
+        for (const bankId in monitorState.manualOverrides) {
+            if (Date.now() < monitorState.manualOverrides[bankId]) {
+                banks[bankId] = monitorState.bankStatuses[bankId];
+            } else {
+                delete monitorState.manualOverrides[bankId];
+            }
+        }
+
         return { rate: foundRate || monitorState.bcvRate, banks };
     } catch (e) {
         addLog(`❌ Error Telegram: ${e.message}`);
@@ -182,6 +192,24 @@ async function runMonitor() {
 // REST API
 app.use(express.json());
 app.use(express.static('public'));
+
+app.post('/api/bank/toggle', (req, res) => {
+    const { bankId } = req.body;
+    if (monitorState.bankStatuses[bankId]) {
+        const current = monitorState.bankStatuses[bankId];
+        const next = current.includes('CERRADO') ? 'ABIERTO 🟢' : 'CERRADO 🔴';
+        monitorState.bankStatuses[bankId] = next;
+        
+        // Bloquear sobrescritura por el bot durante 30 minutos
+        monitorState.manualOverrides[bankId] = Date.now() + (30 * 60 * 1000);
+        
+        addLog(`🛠 FORZADO MANUAL: ${bankId} cambiado a ${next} (Bloqueado por 30min)`);
+        io.emit('state_update', monitorState);
+        res.json({ success: true, status: next });
+    } else {
+        res.status(400).json({ success: false, error: 'Banco no encontrado' });
+    }
+});
 
 io.on('connection', (socket) => {
     socket.emit('state_update', monitorState);
