@@ -60,8 +60,7 @@
         </header>
 
         <div class="controls">
-            <button id="btn-start" class="btn-start" onclick="toggleMonitor('start')">INICIAR MONITOREO</button>
-            <button id="btn-stop" class="btn-stop" onclick="toggleMonitor('stop')" disabled>DETENER SISTEMA</button>
+            <button id="btn-toggle" class="btn-start" onclick="toggleMonitor()">INICIAR MONITOR</button>
         </div>
 
         <div class="grid">
@@ -112,13 +111,17 @@
         const socket = io();
         const logsDiv = document.getElementById('logs');
 
-        function toggleMonitor(action) {
+        let currentRunningStatus = false;
+
+        function toggleMonitor() {
+            const action = currentRunningStatus ? 'stop' : 'start';
             fetch(`/api/${action}`, { method: 'POST' })
                 .then(r => r.json())
                 .then(data => updateUI(data.state));
         }
 
         function updateUI(state) {
+            currentRunningStatus = state.isRunning;
             document.getElementById('bcv-val').innerText = state.bcvRate.toFixed(2) + ' Bs';
             document.getElementById('binance-val').innerText = (state.binanceRate || 0).toFixed(2) + ' Bs';
             document.getElementById('spread-val').innerText = (state.spread || 0).toFixed(2) + '%';
@@ -129,19 +132,18 @@
             document.getElementById('last-update').innerText = 'Actualizado: ' + (state.lastUpdate || '---');
 
             const badge = document.getElementById('status-badge');
-            const btnStart = document.getElementById('btn-start');
-            const btnStop = document.getElementById('btn-stop');
+            const btnToggle = document.getElementById('btn-toggle');
 
             if (state.isRunning) {
                 badge.innerText = 'SISTEMA ACTIVO';
                 badge.className = 'status-badge status-running';
-                btnStart.disabled = true;
-                btnStop.disabled = false;
+                btnToggle.innerText = 'DETENER MONITOR';
+                btnToggle.className = 'btn-stop';
             } else {
                 badge.innerText = 'SISTEMA APAGADO';
                 badge.className = 'status-badge status-stopped';
-                btnStart.disabled = false;
-                btnStop.disabled = true;
+                btnToggle.innerText = 'INICIAR MONITOR';
+                btnToggle.className = 'btn-start';
             }
         }
 
