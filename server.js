@@ -163,12 +163,12 @@ async function runMonitor() {
 💎 <b>Bancamiga:</b> ${monitorState.bankStatuses['BANCAMIGA']}
 
 ⚠️ <b>COMISIONES (BDV/Tesoro):</b>
-• Intervención: 2.5%
-• Binance/GPay: 3.3% (Automático)
+• Comisión Bancaria: 2.5%
+• Binance: Gpay/Bpay: 3.3% (Automático)
 
 ⚠️ <b>COMISIÓN BANCAMIGA:</b>
-• Intervención: 5%
-• Binance/GPay: 3.3%
+• Comisión Bancaria: 5%
+• Binance: Gpay/Bpay: 3.3%
 
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
