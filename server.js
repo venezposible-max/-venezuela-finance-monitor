@@ -41,6 +41,8 @@ let monitorInterval = null;
 let ninjaInterval = null;
 let lastLiquidityVolume = 0;
 let lastLiquidityAlert = 0;
+let lastNinjaPrice = 0;
+let lastPriceAlert = 0;
 
 function addLog(msg) {
     const log = { time: new Date().toLocaleTimeString(), text: msg };
@@ -87,36 +89,64 @@ async function checkLiquidity() {
         const ads = res.data.data;
         if (!ads || ads.length === 0) return;
         
+        // Obtener el precio promedio de los top 5 anuncios
+        const topAdsPrice = ads.slice(0, 5);
+        const prices = topAdsPrice.map(ad => parseFloat(ad.adv.price));
+        const currentPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+
         // Sumar todo el USDT disponible en los top 7 anuncios
         const currentVolume = ads.slice(0, 7).reduce((acc, ad) => acc + parseFloat(ad.adv.tradableQuantity), 0);
         
+        const now = Date.now();
+        const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
+
+        // --- 1. SENSOR DE PRECIO ALCISTA (Salto >= 0.63%) ---
+        if (lastNinjaPrice > 0 && currentPrice > 0) {
+            const priceIncrease = ((currentPrice - lastNinjaPrice) / lastNinjaPrice) * 100;
+            
+            if (priceIncrease >= 0.63 && (now - lastPriceAlert > 3600000)) { // 1 hora de cooldown
+                lastPriceAlert = now;
+                addLog(`🚨 ALERTA NINJA: Salto alcista del +${priceIncrease.toFixed(2)}%`);
+                
+                const alertMsgPrice = `🚀 <b>¡ALERTA DE PRECIO ALCISTA!</b> 🚀
+                
+El dólar en Binance P2P acaba de dar un fuerte salto hacia arriba (<b>+${priceIncrease.toFixed(2)}%</b> repentino).
+
+💵 <b>Precio anterior:</b> ${lastNinjaPrice.toFixed(2)} Bs
+🔥 <b>Precio actual:</b> ${currentPrice.toFixed(2)} Bs
+
+💡 <i>Recomendación: ¡Excelente momento para vender USDT y aumentar el margen de tu arbitraje ahora mismo!</i>
+
+<i>🕒 ${time}</i>`;
+                await sendTelegramAlert(alertMsgPrice);
+            }
+        }
+        
+        // --- 2. SENSOR DE ESCASEZ DE LIQUIDEZ (Caída >= 40%) ---
         if (lastLiquidityVolume > 0 && currentVolume > 0) {
             const drop = ((lastLiquidityVolume - currentVolume) / lastLiquidityVolume) * 100;
-            const now = Date.now();
             
-            // Si la liquidez cae repentinamente más del 40%
-            if (drop >= 40 && (now - lastLiquidityAlert > 3600000)) { // 1 hora de cooldown para no spamear
+            if (drop >= 40 && (now - lastLiquidityAlert > 3600000)) { // 1 hora de cooldown
                 lastLiquidityAlert = now;
                 addLog(`🚨 ALERTA NINJA: Caída de liquidez del -${drop.toFixed(1)}%`);
                 
-                const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
-                const alertMsg = `🚨 <b>¡ALERTA DE LIQUIDEZ P2P!</b> 🚨
+                const alertMsgLiq = `🚨 <b>¡ALERTA DE LIQUIDEZ P2P!</b> 🚨
                 
 El inventario de los comerciantes más baratos acaba de desplomarse un <b>${drop.toFixed(1)}%</b> repentinamente.
 
 🔻 <b>Volumen anterior:</b> ${lastLiquidityVolume.toFixed(0)} USDT
 📉 <b>Volumen actual:</b> ${currentVolume.toFixed(0)} USDT
 
-💡 <i>Recomendación: Si tienes USDT producto de la intervención bancaria de hoy, <b>ESPERA</b>. Al haber escasez, es muy probable que el precio del USDT suba temporalmente en las próximas horas.</i>
+💡 <i>Recomendación: Si tienes USDT producto de la intervención de hoy, <b>ESPERA</b>. Al haber escasez, es muy probable que el precio suba en la próxima hora.</i>
 
 <i>🕒 ${time}</i>`;
-
-                await sendTelegramAlert(alertMsg);
+                await sendTelegramAlert(alertMsgLiq);
             }
         }
         
-        // Actualizar la línea base
+        // Actualizar la línea base para el siguiente minuto
         lastLiquidityVolume = currentVolume;
+        lastNinjaPrice = currentPrice;
         
     } catch (e) {
         // Ignorar fallos de red en el radar ninja
