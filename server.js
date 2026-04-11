@@ -64,7 +64,12 @@ async function getTelegramData() {
         const messages = $('.tgme_widget_message_text').toArray();
         
         let foundRate = null;
-        let banks = { 'BDV': 'CERRADO 🔴', 'TESORO': 'CERRADO 🔴' };
+        let banks = { 
+            'BDV': 'CERRADO 🔴', 
+            'TESORO': 'CERRADO 🔴',
+            'BDT': 'CERRADO 🔴',
+            'ACTIVO': 'CERRADO 🔴'
+        };
 
         for (let i = messages.length - 1; i >= 0; i--) {
             const text = $(messages[i]).text();
