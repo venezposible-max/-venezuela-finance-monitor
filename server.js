@@ -180,6 +180,7 @@ async function runMonitor() {
 }
 
 // REST API
+app.use(express.json());
 app.use(express.static('public'));
 
 io.on('connection', (socket) => {

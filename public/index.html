@@ -50,6 +50,8 @@
         .log-container { background: #000; border-radius: 24px; padding: 20px; height: 300px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #aaa; border: 1px solid rgba(255,255,255,0.05); }
         .log-line { margin-bottom: 8px; line-height: 1.4; border-left: 2px solid var(--accent); padding-left: 10px; }
         .log-time { color: var(--subtext); margin-right: 10px; }
+        .btn-mini { padding: 4px 10px; font-size: 11px; border-radius: 8px; flex: none; width: auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-mini:hover { background: var(--accent); }
     </style>
 </head>
 <body>
@@ -85,23 +87,38 @@
             <h3>Disponibilidad Bancaria</h3>
             <div class="bank-row">
                 <span>🇻🇪 Banco de Venezuela (BDV)</span>
-                <span id="status-bdv">---</span>
+                <div>
+                    <span id="status-bdv" style="margin-right: 15px;">---</span>
+                    <button class="btn-mini" onclick="toggleBank('BDV')">FORZAR</button>
+                </div>
             </div>
             <div class="bank-row">
                 <span>💰 Banco del Tesoro</span>
-                <span id="status-tesoro">---</span>
+                <div>
+                    <span id="status-tesoro" style="margin-right: 15px;">---</span>
+                    <button class="btn-mini" onclick="toggleBank('TESORO')">FORZAR</button>
+                </div>
             </div>
             <div class="bank-row">
                 <span>🏢 Banco BDT</span>
-                <span id="status-bdt">---</span>
+                <div>
+                    <span id="status-bdt" style="margin-right: 15px;">---</span>
+                    <button class="btn-mini" onclick="toggleBank('BDT')">FORZAR</button>
+                </div>
             </div>
             <div class="bank-row">
                 <span>🏦 Banco Activo</span>
-                <span id="status-activo">---</span>
+                <div>
+                    <span id="status-activo" style="margin-right: 15px;">---</span>
+                    <button class="btn-mini" onclick="toggleBank('ACTIVO')">FORZAR</button>
+                </div>
             </div>
             <div class="bank-row">
                 <span>💎 Bancamiga</span>
-                <span id="status-bancamiga">---</span>
+                <div>
+                    <span id="status-bancamiga" style="margin-right: 15px;">---</span>
+                    <button class="btn-mini" onclick="toggleBank('BANCAMIGA')">FORZAR</button>
+                </div>
             </div>
         </div>
 
@@ -116,6 +133,14 @@
         const logsDiv = document.getElementById('logs');
 
         let currentRunningStatus = false;
+
+        function toggleBank(bankId) {
+            fetch('/api/bank/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bankId })
+            }).then(r => r.json());
+        }
 
         function toggleMonitor() {
             const action = currentRunningStatus ? 'stop' : 'start';
