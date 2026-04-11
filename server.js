@@ -71,10 +71,9 @@ async function getTelegramData() {
             'ACTIVO': 'CERRADO 🔴'
         };
 
+        // 1. Buscamos la Tasa en todo el historial reciente
         for (let i = messages.length - 1; i >= 0; i--) {
             const text = $(messages[i]).text();
-            const lowerText = text.toLowerCase();
-            
             if (text.includes('BCV') || text.includes('Intervención') || text.includes('Tasa')) {
                 const matches = text.match(/(\d{2,3}[\.,]\d{2})/g);
                 if (matches && !foundRate) {
@@ -82,7 +81,13 @@ async function getTelegramData() {
                     if (val > 400 && val < 1000) foundRate = val;
                 }
             }
+        }
 
+        // 2. Buscamos el Estado de Bancos SOLO en los últimos 5 mensajes (Sincronización real)
+        const recentMessages = messages.slice(-5);
+        for (let i = recentMessages.length - 1; i >= 0; i--) {
+            const text = $(recentMessages[i]).text();
+            const lowerText = text.toLowerCase();
             const isOpen = lowerText.includes('inició venta') || lowerText.includes('abrió venta') || lowerText.includes('hay cupo') || text.includes('✅');
             const isClosed = lowerText.includes('cerrado') || lowerText.includes('finalizó') || lowerText.includes('sin cupo') || lowerText.includes('terminó') || lowerText.includes('cerró');
 
@@ -103,6 +108,7 @@ async function getTelegramData() {
                 else if (isClosed) banks['ACTIVO'] = 'CERRADO 🔴';
             }
         }
+
         return { rate: foundRate || monitorState.bcvRate, banks };
     } catch (e) {
         addLog(`❌ Error Telegram: ${e.message}`);
