@@ -78,8 +78,8 @@ async function getTelegramData() {
                 }
             }
 
-            const isOpen = lowerText.includes('inició venta') || lowerText.includes('abrió venta') || lowerText.includes('hay cupo');
-            const isClosed = lowerText.includes('cerrado') || lowerText.includes('finalizó') || lowerText.includes('sin cupo');
+            const isOpen = lowerText.includes('inició venta') || lowerText.includes('abrió venta') || lowerText.includes('hay cupo') || text.includes('✅');
+            const isClosed = lowerText.includes('cerrado') || lowerText.includes('finalizó') || lowerText.includes('sin cupo') || lowerText.includes('terminó') || lowerText.includes('cerró');
 
             if (lowerText.includes('venezuela') || lowerText.includes('bdv')) {
                 if (isOpen) banks['BDV'] = 'ABIERTO 🟢';
