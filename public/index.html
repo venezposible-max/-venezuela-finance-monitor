@@ -255,6 +255,14 @@
                 }
             });
 
+            // Actualizar botones de intervalo
+            document.querySelectorAll('.chip').forEach(c => {
+                c.classList.remove('active');
+                if (parseInt(c.getAttribute('data-min')) === state.interval) {
+                    c.classList.add('active');
+                }
+            });
+
             const badge = document.getElementById('status-badge');
             const btnToggle = document.getElementById('btn-toggle');
 
@@ -307,11 +315,6 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ minutes })
-            }).then(r => r.json()).then(data => {
-                document.querySelectorAll('.chip').forEach(c => {
-                    c.classList.remove('active');
-                    if (c.getAttribute('data-min') == minutes) c.classList.add('active');
-                });
             });
         }
     </script>

@@ -32,7 +32,8 @@ let monitorState = {
         'ACTIVO': 'CERRADO 🔴',
         'BANCAMIGA': 'CERRADO 🔴'
     },
-    manualOverrides: [], // Lista de IDs de bancos en modo manual
+    manualOverrides: [], 
+    interval: 5, // Intervalo en minutos
     logs: []
 };
 
@@ -262,6 +263,25 @@ app.post('/api/bank/auto', (req, res) => {
 
 io.on('connection', (socket) => {
     socket.emit('state_update', monitorState);
+});
+
+app.post('/api/interval', (req, res) => {
+    const { minutes } = req.body;
+    const mins = parseInt(minutes);
+    if (!isNaN(mins)) {
+        monitorIntervalTime = mins * 60 * 1000;
+        monitorState.interval = mins;
+        addLog(`⏲ Intervalo actualizado a: ${mins} minutos`);
+        
+        if (monitorState.isRunning) {
+            clearInterval(monitorInterval);
+            monitorInterval = setInterval(runMonitor, monitorIntervalTime);
+        }
+        io.emit('state_update', monitorState);
+        res.json({ success: true, interval: mins });
+    } else {
+        res.status(400).json({ error: 'Intervalo inválido' });
+    }
 });
 
 app.post('/api/start', (req, res) => {
