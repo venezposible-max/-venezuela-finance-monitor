@@ -29,7 +29,8 @@ let monitorState = {
         'BDV': 'CERRADO 🔴', 
         'TESORO': 'CERRADO 🔴',
         'BDT': 'CERRADO 🔴',
-        'ACTIVO': 'CERRADO 🔴'
+        'ACTIVO': 'CERRADO 🔴',
+        'BANCAMIGA': 'CERRADO 🔴'
     },
     logs: []
 };
@@ -68,7 +69,8 @@ async function getTelegramData() {
             'BDV': 'CERRADO 🔴', 
             'TESORO': 'CERRADO 🔴',
             'BDT': 'CERRADO 🔴',
-            'ACTIVO': 'CERRADO 🔴'
+            'ACTIVO': 'CERRADO 🔴',
+            'BANCAMIGA': 'CERRADO 🔴'
         };
 
         // 1. Buscamos la Tasa de Intervención (Formato: TASA: 570,75 Bs.)
@@ -108,6 +110,10 @@ async function getTelegramData() {
             if (text.includes('ACTIVO')) {
                 if (isOpen) banks['ACTIVO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['ACTIVO'] = 'CERRADO 🔴';
+            }
+            if (text.includes('BANCAMIGA')) {
+                if (isOpen) banks['BANCAMIGA'] = 'ABIERTO 🟢';
+                else if (isClosed) banks['BANCAMIGA'] = 'CERRADO 🔴';
             }
         }
 
@@ -154,10 +160,15 @@ async function runMonitor() {
 💰 <b>Tesoro:</b> ${monitorState.bankStatuses['TESORO']}
 🏢 <b>BDT:</b> ${monitorState.bankStatuses['BDT']}
 🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}
+💎 <b>Bancamiga:</b> ${monitorState.bankStatuses['BANCAMIGA']}
 
 ⚠️ <b>COMISIONES (BDV/Tesoro):</b>
 • Intervención: 2.5%
 • Binance/GPay: 3.3% (Automático)
+
+⚠️ <b>COMISIÓN BANCAMIGA:</b>
+• Intervención: 5%
+• Binance/GPay: 3.3%
 
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
