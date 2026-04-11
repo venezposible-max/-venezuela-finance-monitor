@@ -143,14 +143,11 @@ async function runMonitor() {
         monitorState.lastUpdate = new Date().toLocaleTimeString();
 
         const bcv = monitorState.bcvRate;
-        const totalCommissions = 0.025 + 0.033; // 2.5% + 3.3%
-        const effectiveRate = bcv * (1 + totalCommissions);
-
         const report = `
 📊 <b>MONITOR DE ECONOMÍA VENEZUELA</b>
 ⏱ <i>Actualización: ${monitorState.lastUpdate}</i>
 
-🏦 <b>BCV (Oficial):</b> ${bcv.toFixed(2)} VES
+🏦 <b>BCV (Intervención):</b> ${bcv.toFixed(2)} VES
 
 🏛 <b>MERCADO CAMBIARIO:</b>
 🇻🇪 <b>Venezuela (BDV):</b> ${monitorState.bankStatuses['BDV']}
@@ -158,13 +155,8 @@ async function runMonitor() {
 🏢 <b>BDT:</b> ${monitorState.bankStatuses['BDT']}
 🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}
 
-⚠️ <b>COMISIONES (BDV/Tesoro):</b>
-• Intervención: 2.5%
-• Binance/GPay: 3.3% (Automático)
-💵 <b>Precio Real Proyectado:</b> ${effectiveRate.toFixed(2)} VES
-
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
-📐 <b>Spread (Oficial vs P2P):</b> ${monitorState.spread.toFixed(2)}%
+📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
         `;
 
         await sendTelegramAlert(report);
