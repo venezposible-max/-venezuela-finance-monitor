@@ -203,6 +203,21 @@ async function runMonitor() {
 app.use(express.json());
 app.use(express.static('public'));
 
+app.post('/api/comment', async (req, res) => {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: 'Mensaje vacío' });
+    
+    try {
+        const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
+        const telegramMsg = `📝 <b>NOTA DEL MONITOR:</b>\n\n${message}\n\n<i>🕒 ${time}</i>`;
+        await sendTelegramAlert(telegramMsg);
+        addLog(`💬 Comentario enviado a Telegram: "${message}"`);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/bank/toggle', (req, res) => {
     const { bankId } = req.body;
     if (monitorState.bankStatuses[bankId]) {
