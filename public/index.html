@@ -222,18 +222,23 @@
             </div>
             <button class="calc-btn" onclick="calcArbitrage()">CALCULAR GANANCIA</button>
             <div id="calc-results" class="calc-results">
-                <div class="calc-row"><span class="label">Tasa Intervención (BCV)</span><span id="cr-bcv" class="val">---</span></div>
-                <div class="calc-row"><span class="label">Tasa Binance P2P</span><span id="cr-binance" class="val">---</span></div>
+                <div class="calc-row"><span class="label">📊 Tasa Binance P2P (Venta)</span><span id="cr-binance" class="val">---</span></div>
+                <div class="calc-row"><span class="label">📊 Tasa Intervención (BCV)</span><span id="cr-bcv" class="val">---</span></div>
                 <div class="calc-divider"></div>
-                <div class="calc-row"><span class="label">💰 Recibes por Intervención (Bruto)</span><span id="cr-int-bruto" class="val">---</span></div>
+
+                <div class="calc-row"><span class="label">1️⃣ Vendes USDT en Binance P2P</span><span id="cr-step1" class="val">---</span></div>
+                <div class="calc-row"><span class="label">2️⃣ Compras USD por Intervención</span><span id="cr-step2" class="val">---</span></div>
                 <div class="calc-row"><span class="label">📉 Comisión Bancaria</span><span id="cr-com-bank" class="val" style="color:var(--red)">---</span></div>
-                <div class="calc-row"><span class="label">✅ Neto Intervención</span><span id="cr-int-neto" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-row"><span class="label">💵 USD después de comisión</span><span id="cr-step3" class="val" style="color:var(--green)">---</span></div>
                 <div class="calc-divider"></div>
-                <div class="calc-row"><span class="label">💰 Recibes por Binance (Bruto)</span><span id="cr-bin-bruto" class="val">---</span></div>
+
+                <div class="calc-row"><span class="label">3️⃣ Envías por Binance Pay</span><span id="cr-step4" class="val">---</span></div>
                 <div class="calc-row"><span class="label">📉 Comisión Binance: Gpay/Bpay</span><span id="cr-com-bin" class="val" style="color:var(--red)">---</span></div>
-                <div class="calc-row"><span class="label">✅ Neto Binance</span><span id="cr-bin-neto" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-row"><span class="label">💰 USDT Final después de todo</span><span id="cr-final" class="val" style="color:var(--green)">---</span></div>
                 <div class="calc-divider"></div>
+
                 <div class="calc-row" style="padding: 15px 0;"><span class="label" style="font-size:16px; font-weight:700;">🏆 GANANCIA NETA</span><span id="cr-profit" class="val profit">---</span></div>
+                <div class="calc-row"><span class="label">📈 Rendimiento</span><span id="cr-pct" class="val profit">---</span></div>
             </div>
         </div>
 
@@ -386,39 +391,50 @@
                 return;
             }
 
-            // Brutos
-            const intBruto = usdt * bcv;
-            const binBruto = usdt * bin;
+            // PASO 1: Vendes USDT en Binance P2P → Recibes Bolívares
+            const bolivares = usdt * bin;
 
-            // Comisiones
-            const comBank = intBruto * (com.bancaria / 100);
-            const comBin = binBruto * (com.binance / 100);
+            // PASO 2: Compras USD por intervención con esos bolívares
+            const usdBruto = bolivares / bcv;
 
-            // Netos
-            const intNeto = intBruto - comBank;
-            const binNeto = binBruto - comBin;
+            // PASO 3: Se descuenta la comisión bancaria
+            const comBancaria = usdBruto * (com.bancaria / 100);
+            const usdNeto = usdBruto - comBancaria;
 
-            // Ganancia = Intervención Neto - Binance Neto (cuánto más ganas por intervención vs vender en Binance)
-            const profit = intNeto - binNeto;
+            // PASO 4: Envías esos USD por Binance Pay → Se descuenta comisión
+            const comBinance = usdNeto * (com.binance / 100);
+            const usdtFinal = usdNeto - comBinance;
+
+            // RESULTADO
+            const ganancia = usdtFinal - usdt;
+            const rendimiento = (ganancia / usdt) * 100;
 
             // Mostrar resultados
+            const fmt = (n) => n.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
             document.getElementById('calc-results').style.display = 'block';
-            document.getElementById('cr-bcv').innerText = bcv.toFixed(2) + ' Bs';
-            document.getElementById('cr-binance').innerText = bin.toFixed(2) + ' Bs';
-            document.getElementById('cr-int-bruto').innerText = intBruto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
-            document.getElementById('cr-com-bank').innerText = '-' + comBank.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs (' + com.bancaria + '%)';
-            document.getElementById('cr-int-neto').innerText = intNeto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
-            document.getElementById('cr-bin-bruto').innerText = binBruto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
-            document.getElementById('cr-com-bin').innerText = '-' + comBin.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs (' + com.binance + '%)';
-            document.getElementById('cr-bin-neto').innerText = binNeto.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
-            
+            document.getElementById('cr-binance').innerText = fmt(bin) + ' Bs/$';
+            document.getElementById('cr-bcv').innerText = fmt(bcv) + ' Bs/$';
+            document.getElementById('cr-step1').innerText = fmt(bolivares) + ' Bs';
+            document.getElementById('cr-step2').innerText = fmt(usdBruto) + ' USD';
+            document.getElementById('cr-com-bank').innerText = '-' + fmt(comBancaria) + ' USD (' + com.bancaria + '%)';
+            document.getElementById('cr-step3').innerText = fmt(usdNeto) + ' USD';
+            document.getElementById('cr-step4').innerText = fmt(usdNeto) + ' USDT';
+            document.getElementById('cr-com-bin').innerText = '-' + fmt(comBinance) + ' USDT (' + com.binance + '%)';
+            document.getElementById('cr-final').innerText = fmt(usdtFinal) + ' USDT';
+
             const profitEl = document.getElementById('cr-profit');
-            if (profit >= 0) {
-                profitEl.innerText = '+' + profit.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+            const pctEl = document.getElementById('cr-pct');
+            if (ganancia >= 0) {
+                profitEl.innerText = '+' + fmt(ganancia) + ' USDT';
                 profitEl.className = 'val profit';
+                pctEl.innerText = '+' + fmt(rendimiento) + '%';
+                pctEl.className = 'val profit';
             } else {
-                profitEl.innerText = profit.toLocaleString('es-VE', {maximumFractionDigits: 2}) + ' Bs';
+                profitEl.innerText = fmt(ganancia) + ' USDT';
                 profitEl.className = 'val loss';
+                pctEl.innerText = fmt(rendimiento) + '%';
+                pctEl.className = 'val loss';
             }
         }
 
