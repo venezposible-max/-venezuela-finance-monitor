@@ -22,8 +22,8 @@ const CHAT_ID = process.env.CHAT_ID || '-1003812445382';
 let monitorState = {
     isRunning: false,
     lastUpdate: null,
-    bcvRate: 571.75,
-    binanceRate: 0,
+    bcvRate: 570.75,
+    binanceRate: 639.00,
     spread: 0,
     bankStatuses: { 
         'BDV': 'CERRADO 🔴', 
@@ -71,39 +71,41 @@ async function getTelegramData() {
             'ACTIVO': 'CERRADO 🔴'
         };
 
-        // 1. Buscamos la Tasa en todo el historial reciente
+        // 1. Buscamos la Tasa de Intervención (Formato: TASA: 570,75 Bs.)
         for (let i = messages.length - 1; i >= 0; i--) {
             const text = $(messages[i]).text();
-            if (text.includes('BCV') || text.includes('Intervención') || text.includes('Tasa')) {
-                const matches = text.match(/(\d{2,3}[\.,]\d{2})/g);
+            if (text.includes('TASA:')) {
+                const matches = text.match(/TASA:\s*(\d{2,3}[\.,]\d{2})/i);
                 if (matches && !foundRate) {
-                    const val = parseFloat(matches[0].replace(',', '.'));
-                    if (val > 400 && val < 1000) foundRate = val;
+                    const val = parseFloat(matches[1].replace(',', '.'));
+                    if (val > 400 && val < 1000) {
+                        foundRate = val;
+                        addLog(`💎 Tasa de Intervención detectada: ${val} Bs.`);
+                    }
                 }
             }
         }
 
-        // 2. Buscamos el Estado de Bancos SOLO en los últimos 5 mensajes (Sincronización real)
-        const recentMessages = messages.slice(-5);
-        for (let i = recentMessages.length - 1; i >= 0; i--) {
-            const text = $(recentMessages[i]).text();
-            const lowerText = text.toLowerCase();
-            const isOpen = lowerText.includes('inició venta') || lowerText.includes('abrió venta') || lowerText.includes('hay cupo') || text.includes('✅');
-            const isClosed = lowerText.includes('cerrado') || lowerText.includes('finalizó') || lowerText.includes('sin cupo') || lowerText.includes('terminó') || lowerText.includes('cerró');
+        // 2. Estado de Bancos (Detección por Emojis y Siglas)
+        const recentMessages = messages.slice(-10);
+        for (let i = 0; i < recentMessages.length; i++) {
+            const text = $(recentMessages[i]).text().toUpperCase();
+            const isOpen = text.includes('💸✔️') || text.includes('ACTIVO') || text.includes('ABRIÓ') || text.includes('INICIÓ');
+            const isClosed = text.includes('🚫') || text.includes('CERRADO') || text.includes('FINALIZÓ') || text.includes('TERMINÓ');
 
-            if (lowerText.includes('venezuela') || lowerText.includes('bdv')) {
+            if (text.includes('BDV') || text.includes('VENEZUELA')) {
                 if (isOpen) banks['BDV'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BDV'] = 'CERRADO 🔴';
             }
-            if (lowerText.includes('tesoro') || lowerText.includes('bt ')) {
+            if (text.includes('BT ') || text.includes('TESORO')) {
                 if (isOpen) banks['TESORO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['TESORO'] = 'CERRADO 🔴';
             }
-            if (lowerText.includes('bdt')) {
+            if (text.includes('BDT') || text.includes('TRABAJADORES')) {
                 if (isOpen) banks['BDT'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BDT'] = 'CERRADO 🔴';
             }
-            if (lowerText.includes('activo')) {
+            if (text.includes('ACTIVO')) {
                 if (isOpen) banks['ACTIVO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['ACTIVO'] = 'CERRADO 🔴';
             }
