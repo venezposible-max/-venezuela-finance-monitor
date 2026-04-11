@@ -32,7 +32,7 @@ let monitorState = {
         'ACTIVO': 'CERRADO 🔴',
         'BANCAMIGA': 'CERRADO 🔴'
     },
-    manualOverrides: {}, 
+    manualOverrides: [], // Lista de IDs de bancos en modo manual
     logs: []
 };
 
@@ -118,14 +118,19 @@ async function getTelegramData() {
             }
         }
 
-        // 3. Respetar Overrides Manuales (no sobrescribir si el usuario forzó el estado hace menos de 30min)
-        for (const bankId in monitorState.manualOverrides) {
-            if (Date.now() < monitorState.manualOverrides[bankId]) {
-                banks[bankId] = monitorState.bankStatuses[bankId];
-            } else {
-                delete monitorState.manualOverrides[bankId];
-            }
+        // 3. Respetar Overrides Manuales (no sobrescribir si el banco está en modo manual)
+        for (const bankId of monitorState.manualOverrides) {
+            banks[bankId] = monitorState.bankStatuses[bankId];
         }
+
+        // 4. Hora oficial de Venezuela (VET)
+        monitorState.lastUpdate = new Date().toLocaleTimeString('es-VE', { 
+            timeZone: 'America/Caracas',
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
 
         return { rate: foundRate || monitorState.bcvRate, banks };
     } catch (e) {
@@ -156,7 +161,12 @@ async function runMonitor() {
         monitorState.bcvRate = telegram.rate;
         monitorState.bankStatuses = telegram.banks;
         monitorState.spread = ((binance - telegram.rate) / telegram.rate) * 100;
-        monitorState.lastUpdate = new Date().toLocaleTimeString();
+        monitorState.lastUpdate = new Date().toLocaleTimeString('es-VE', { 
+            timeZone: 'America/Caracas',
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
         const bcv = monitorState.bcvRate;
         const report = `
@@ -200,15 +210,25 @@ app.post('/api/bank/toggle', (req, res) => {
         const next = current.includes('CERRADO') ? 'ABIERTO 🟢' : 'CERRADO 🔴';
         monitorState.bankStatuses[bankId] = next;
         
-        // Bloquear sobrescritura por el bot durante 30 minutos
-        monitorState.manualOverrides[bankId] = Date.now() + (30 * 60 * 1000);
+        // Agregar a la lista de manuales si no está
+        if (!monitorState.manualOverrides.includes(bankId)) {
+            monitorState.manualOverrides.push(bankId);
+        }
         
-        addLog(`🛠 FORZADO MANUAL: ${bankId} cambiado a ${next} (Bloqueado por 30min)`);
+        addLog(`🛠 MODO MANUAL: ${bankId} fijado en ${next}`);
         io.emit('state_update', monitorState);
         res.json({ success: true, status: next });
     } else {
         res.status(400).json({ success: false, error: 'Banco no encontrado' });
     }
+});
+
+app.post('/api/bank/auto', (req, res) => {
+    const { bankId } = req.body;
+    monitorState.manualOverrides = monitorState.manualOverrides.filter(id => id !== bankId);
+    addLog(`🤖 MODO AUTO: ${bankId} ahora sigue al bot`);
+    runMonitor(); // Actualizamos inmediatamente
+    res.json({ success: true });
 });
 
 io.on('connection', (socket) => {

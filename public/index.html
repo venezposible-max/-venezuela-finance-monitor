@@ -107,6 +107,7 @@
             <div class="bank-row">
                 <span>🇻🇪 Banco de Venezuela (BDV)</span>
                 <div class="switch-container">
+                    <button class="btn-mini" onclick="setAuto('BDV')" style="margin-right:10px">AUTO 🤖</button>
                     <span id="lbl-BDV" class="switch-label closed">CERRADO</span>
                     <label class="toggle">
                         <input type="checkbox" id="sw-BDV" onchange="toggleBank('BDV')">
@@ -117,6 +118,7 @@
             <div class="bank-row">
                 <span>💰 Banco del Tesoro</span>
                 <div class="switch-container">
+                    <button class="btn-mini" onclick="setAuto('TESORO')" style="margin-right:10px">AUTO 🤖</button>
                     <span id="lbl-TESORO" class="switch-label closed">CERRADO</span>
                     <label class="toggle">
                         <input type="checkbox" id="sw-TESORO" onchange="toggleBank('TESORO')">
@@ -127,6 +129,7 @@
             <div class="bank-row">
                 <span>🏢 Banco BDT</span>
                 <div class="switch-container">
+                    <button class="btn-mini" onclick="setAuto('BDT')" style="margin-right:10px">AUTO 🤖</button>
                     <span id="lbl-BDT" class="switch-label closed">CERRADO</span>
                     <label class="toggle">
                         <input type="checkbox" id="sw-BDT" onchange="toggleBank('BDT')">
@@ -137,6 +140,7 @@
             <div class="bank-row">
                 <span>🏦 Banco Activo</span>
                 <div class="switch-container">
+                    <button class="btn-mini" onclick="setAuto('ACTIVO')" style="margin-right:10px">AUTO 🤖</button>
                     <span id="lbl-ACTIVO" class="switch-label closed">CERRADO</span>
                     <label class="toggle">
                         <input type="checkbox" id="sw-ACTIVO" onchange="toggleBank('ACTIVO')">
@@ -147,6 +151,7 @@
             <div class="bank-row">
                 <span>💎 Bancamiga</span>
                 <div class="switch-container">
+                    <button class="btn-mini" onclick="setAuto('BANCAMIGA')" style="margin-right:10px">AUTO 🤖</button>
                     <span id="lbl-BANCAMIGA" class="switch-label closed">CERRADO</span>
                     <label class="toggle">
                         <input type="checkbox" id="sw-BANCAMIGA" onchange="toggleBank('BANCAMIGA')">
@@ -173,7 +178,15 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ bankId })
-            }).then(r => r.json());
+            });
+        }
+
+        function setAuto(bankId) {
+            fetch('/api/bank/auto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bankId })
+            });
         }
 
         function toggleMonitor() {
@@ -194,12 +207,22 @@
             banks.forEach(id => {
                 const sw = document.getElementById(`sw-${id}`);
                 const lbl = document.getElementById(`lbl-${id}`);
+                const row = lbl.closest('.bank-row');
                 const status = state.bankStatuses[id];
                 const isOpen = status.includes('ABIERTO');
+                const isManual = (state.manualOverrides || []).includes(id);
                 
                 sw.checked = isOpen;
                 lbl.innerText = isOpen ? 'MERCADO ABIERTO 🟢' : 'MERCADO CERRADO 🔴';
                 lbl.className = isOpen ? 'switch-label open' : 'switch-label closed';
+                
+                if (isManual) {
+                    row.style.borderColor = 'var(--accent)';
+                    row.style.background = 'rgba(88, 101, 242, 0.05)';
+                } else {
+                    row.style.borderColor = 'rgba(255,255,255,0.05)';
+                    row.style.background = 'rgba(255,255,255,0.02)';
+                }
             });
 
             const badge = document.getElementById('status-badge');
