@@ -78,7 +78,6 @@ async function getBinanceRate() {
 }
 
 async function checkLiquidity() {
-    if (!monitorState.isRunning) return;
     try {
         const payload = {
             asset: 'USDT', fiat: 'VES', tradeType: 'SELL', 
@@ -354,8 +353,6 @@ app.post('/api/start', (req, res) => {
         addLog('🚀 Monitor INICIADO por el usuario');
         runMonitor();
         monitorInterval = setInterval(runMonitor, monitorState.interval * 60 * 1000);
-        // Activar el radar ninja cada 60 segundos
-        ninjaInterval = setInterval(checkLiquidity, 60000);
     }
     res.json({ success: true, state: monitorState });
 });
@@ -363,12 +360,15 @@ app.post('/api/start', (req, res) => {
 app.post('/api/stop', (req, res) => {
     monitorState.isRunning = false;
     if (monitorInterval) clearInterval(monitorInterval);
-    if (ninjaInterval) clearInterval(ninjaInterval);
-    lastLiquidityVolume = 0; // resetear línea base
     addLog('🛑 Monitor DETENIDO por el usuario');
     res.json({ success: true, state: monitorState });
 });
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    
+    // El Radar Ninja inicia automáticamente al arrancar el servidor (24/7)
+    addLog('🥷 Radar Ninja de Liquidez P2P activado en segundo plano (24/7)');
+    ninjaInterval = setInterval(checkLiquidity, 60000);
+    checkLiquidity(); // Ejecución inicial
 });
