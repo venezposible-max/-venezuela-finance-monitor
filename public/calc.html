@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Arbitraje</title>
+    <meta name="apple-mobile-web-app-title" content="Calc Arbitraje">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="icon" type="image/png" href="/icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --bg: #0a0b10;
+            --card: #15171f;
+            --accent: #5865f2;
+            --green: #43b581;
+            --red: #f04747;
+            --text: #ffffff;
+            --subtext: #8e9297;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 30px 20px; min-height: 100vh; }
+        .container { max-width: 500px; margin: 0 auto; }
+
+        header { text-align: center; margin-bottom: 30px; }
+        h1 { font-size: 22px; font-weight: 700; background: linear-gradient(90deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+        .subtitle { font-size: 13px; color: var(--subtext); }
+
+        .rates-bar { display: flex; gap: 10px; margin-bottom: 25px; }
+        .rate-chip { flex: 1; background: var(--card); padding: 12px; border-radius: 14px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .rate-chip .label { font-size: 10px; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .rate-chip .val { font-size: 18px; font-weight: 700; }
+        .rate-chip .val.green { color: var(--green); }
+
+        .calc-box { background: var(--card); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); }
+        .calc-inputs { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+        .calc-inputs select, .calc-inputs input { 
+            flex: 1; min-width: 120px; padding: 14px 16px; border-radius: 14px; 
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); 
+            color: #fff; font-size: 16px; font-family: inherit; font-weight: 600; 
+        }
+        .calc-inputs select:focus, .calc-inputs input:focus { outline: none; border-color: var(--accent); }
+        .calc-inputs select option { background: #1a1c25; color: #fff; }
+
+        .calc-btn { 
+            width: 100%; padding: 16px; border-radius: 16px; 
+            background: linear-gradient(135deg, var(--accent), #7c3aed); 
+            border: none; color: #fff; font-size: 16px; font-weight: 700; 
+            cursor: pointer; transition: 0.3s; letter-spacing: 0.5px; 
+        }
+        .calc-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4); }
+        .calc-btn:active { transform: scale(0.98); }
+
+        .calc-results { display: none; margin-top: 22px; }
+        .calc-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        .calc-row:last-child { border: none; }
+        .calc-row .label { color: var(--subtext); }
+        .calc-row .val { font-weight: 700; }
+        .calc-row .val.profit { color: var(--green); font-size: 20px; }
+        .calc-row .val.loss { color: var(--red); font-size: 20px; }
+        .calc-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); margin: 12px 0; }
+
+        .footer { text-align: center; margin-top: 25px; font-size: 12px; color: var(--subtext); }
+        .footer a { color: var(--accent); text-decoration: none; }
+
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧮 CALCULADORA DE ARBITRAJE</h1>
+            <p class="subtitle">Calcula tu ganancia en tiempo real</p>
+        </header>
+
+        <div class="rates-bar">
+            <div class="rate-chip">
+                <div class="label">Intervención</div>
+                <div id="rate-bcv" class="val pulse">---</div>
+            </div>
+            <div class="rate-chip">
+                <div class="label">Binance P2P</div>
+                <div id="rate-bin" class="val pulse">---</div>
+            </div>
+            <div class="rate-chip">
+                <div class="label">Spread</div>
+                <div id="rate-spread" class="val green pulse">---</div>
+            </div>
+        </div>
+
+        <div class="calc-box">
+            <div class="calc-inputs">
+                <select id="calc-bank">
+                    <option value="BDV">🇻🇪 BDV (2.5%)</option>
+                    <option value="TESORO">💰 Tesoro (2.5%)</option>
+                    <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
+                </select>
+                <input type="number" id="calc-usdt" placeholder="USDT" value="100">
+            </div>
+            <button class="calc-btn" onclick="calcArbitrage()">CALCULAR GANANCIA</button>
+
+            <div id="calc-results" class="calc-results">
+                <div class="calc-row"><span class="label">1️⃣ Vendes USDT en Binance</span><span id="cr-step1" class="val">---</span></div>
+                <div class="calc-row"><span class="label">2️⃣ Compras USD Intervención</span><span id="cr-step2" class="val">---</span></div>
+                <div class="calc-row"><span class="label">📉 Comisión Bancaria</span><span id="cr-com-bank" class="val" style="color:var(--red)">---</span></div>
+                <div class="calc-row"><span class="label">💵 USD neto</span><span id="cr-step3" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-divider"></div>
+                <div class="calc-row"><span class="label">3️⃣ Envías por Binance Pay</span><span id="cr-step4" class="val">---</span></div>
+                <div class="calc-row"><span class="label">📉 Comisión Gpay/Bpay</span><span id="cr-com-bin" class="val" style="color:var(--red)">---</span></div>
+                <div class="calc-row"><span class="label">💰 USDT Final</span><span id="cr-final" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-divider"></div>
+                <div class="calc-row" style="padding:15px 0"><span class="label" style="font-size:16px;font-weight:700">🏆 GANANCIA</span><span id="cr-profit" class="val profit">---</span></div>
+                <div class="calc-row"><span class="label">📈 Rendimiento</span><span id="cr-pct" class="val profit">---</span></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Tasas en vivo · <a href="https://t.me/venezposible">@venezposible</a>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let bcvRate = 0, binanceRate = 0;
+
+        const COMISIONES = {
+            BDV: { bancaria: 2.5, binance: 3.3 },
+            TESORO: { bancaria: 2.5, binance: 3.3 },
+            BANCAMIGA: { bancaria: 5, binance: 3.3 }
+        };
+
+        socket.on('state_update', (state) => {
+            bcvRate = state.bcvRate || 0;
+            binanceRate = state.binanceRate || 0;
+
+            document.getElementById('rate-bcv').innerText = bcvRate > 0 ? bcvRate.toFixed(2) : '---';
+            document.getElementById('rate-bin').innerText = binanceRate > 0 ? binanceRate.toFixed(2) : '---';
+            document.getElementById('rate-spread').innerText = state.spread ? state.spread.toFixed(2) + '%' : '---';
+
+            document.querySelectorAll('.pulse').forEach(el => el.classList.remove('pulse'));
+        });
+
+        function calcArbitrage() {
+            const bank = document.getElementById('calc-bank').value;
+            const usdt = parseFloat(document.getElementById('calc-usdt').value) || 0;
+            const com = COMISIONES[bank];
+
+            if (bcvRate === 0 || binanceRate === 0) {
+                alert('⏳ Esperando tasas en vivo del monitor...');
+                return;
+            }
+
+            const bolivares = usdt * binanceRate;
+            const usdBruto = bolivares / bcvRate;
+            const comBancaria = usdBruto * (com.bancaria / 100);
+            const usdNeto = usdBruto - comBancaria;
+            const comBinance = usdNeto * (com.binance / 100);
+            const usdtFinal = usdNeto - comBinance;
+            const ganancia = usdtFinal - usdt;
+            const rendimiento = (ganancia / usdt) * 100;
+
+            const fmt = (n) => n.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            document.getElementById('calc-results').style.display = 'block';
+            document.getElementById('cr-step1').innerText = fmt(bolivares) + ' Bs';
+            document.getElementById('cr-step2').innerText = fmt(usdBruto) + ' USD';
+            document.getElementById('cr-com-bank').innerText = '-' + fmt(comBancaria) + ' USD (' + com.bancaria + '%)';
+            document.getElementById('cr-step3').innerText = fmt(usdNeto) + ' USD';
+            document.getElementById('cr-step4').innerText = fmt(usdNeto) + ' USDT';
+            document.getElementById('cr-com-bin').innerText = '-' + fmt(comBinance) + ' USDT (' + com.binance + '%)';
+            document.getElementById('cr-final').innerText = fmt(usdtFinal) + ' USDT';
+
+            const profitEl = document.getElementById('cr-profit');
+            const pctEl = document.getElementById('cr-pct');
+            if (ganancia >= 0) {
+                profitEl.innerText = '+' + fmt(ganancia) + ' USDT';
+                profitEl.className = 'val profit';
+                pctEl.innerText = '+' + fmt(rendimiento) + '%';
+                pctEl.className = 'val profit';
+            } else {
+                profitEl.innerText = fmt(ganancia) + ' USDT';
+                profitEl.className = 'val loss';
+                pctEl.innerText = fmt(rendimiento) + '%';
+                pctEl.className = 'val loss';
+            }
+        }
+    </script>
+</body>
+</html>
