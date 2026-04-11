@@ -47,15 +47,29 @@ function addLog(msg) {
 
 async function getBinanceRate() {
     try {
-        const payload = { asset: 'USDT', fiat: 'VES', merchantCheck: false, page: 1, payTypes: [], publisherType: null, rows: 10, tradeType: 'BUY' };
-        const res = await axios.post(BINANCE_P2P_URL, payload);
+        const payload = {
+            asset: 'USDT',
+            fiat: 'VES',
+            tradeType: 'SELL', // Ver a cuánto están comprando los usuarios (tu precio de venta)
+            merchantCheck: false,
+            page: 1,
+            rows: 10,
+            payTypes: ['BankVenezuela', 'BancoTesoro', 'Bancamiga'], 
+            transAmount: "63500", // Base de 100 USDT
+            publisherType: null
+        };
+        const res = await axios.post('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', payload);
         const ads = res.data.data;
-        if (!ads || ads.length === 0) return 0;
+        if (!ads || ads.length === 0) return monitorState.binanceRate;
+        
         const prices = ads.slice(0, 5).map(ad => parseFloat(ad.adv.price));
-        return prices.reduce((a, b) => a + b, 0) / prices.length;
+        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+        
+        addLog(`📊 Binance P2P: Promedio ${avg.toFixed(2)} (Base 100 USDT)`);
+        return avg;
     } catch (e) {
         addLog(`❌ Error Binance: ${e.message}`);
-        return 0;
+        return monitorState.binanceRate;
     }
 }
 
