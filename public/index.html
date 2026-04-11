@@ -106,23 +106,53 @@
             <h3>Disponibilidad Bancaria</h3>
             <div class="bank-row">
                 <span>🇻🇪 Banco de Venezuela (BDV)</span>
-                <button id="sw-BDV" class="switch closed" onclick="toggleBank('BDV')">CERRADO</button>
+                <div class="switch-container">
+                    <span id="lbl-BDV" class="switch-label closed">CERRADO</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="sw-BDV" onchange="toggleBank('BDV')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
             <div class="bank-row">
                 <span>💰 Banco del Tesoro</span>
-                <button id="sw-TESORO" class="switch closed" onclick="toggleBank('TESORO')">CERRADO</button>
+                <div class="switch-container">
+                    <span id="lbl-TESORO" class="switch-label closed">CERRADO</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="sw-TESORO" onchange="toggleBank('TESORO')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
             <div class="bank-row">
                 <span>🏢 Banco BDT</span>
-                <button id="sw-BDT" class="switch closed" onclick="toggleBank('BDT')">CERRADO</button>
+                <div class="switch-container">
+                    <span id="lbl-BDT" class="switch-label closed">CERRADO</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="sw-BDT" onchange="toggleBank('BDT')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
             <div class="bank-row">
                 <span>🏦 Banco Activo</span>
-                <button id="sw-ACTIVO" class="switch closed" onclick="toggleBank('ACTIVO')">CERRADO</button>
+                <div class="switch-container">
+                    <span id="lbl-ACTIVO" class="switch-label closed">CERRADO</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="sw-ACTIVO" onchange="toggleBank('ACTIVO')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
             <div class="bank-row">
                 <span>💎 Bancamiga</span>
-                <button id="sw-BANCAMIGA" class="switch closed" onclick="toggleBank('BANCAMIGA')">CERRADO</button>
+                <div class="switch-container">
+                    <span id="lbl-BANCAMIGA" class="switch-label closed">CERRADO</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="sw-BANCAMIGA" onchange="toggleBank('BANCAMIGA')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -162,12 +192,14 @@
 
             const banks = ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA'];
             banks.forEach(id => {
-                const btn = document.getElementById(`sw-${id}`);
+                const sw = document.getElementById(`sw-${id}`);
+                const lbl = document.getElementById(`lbl-${id}`);
                 const status = state.bankStatuses[id];
                 const isOpen = status.includes('ABIERTO');
                 
-                btn.innerText = isOpen ? 'ABIERTO' : 'CERRADO';
-                btn.className = isOpen ? 'switch open' : 'switch closed';
+                sw.checked = isOpen;
+                lbl.innerText = isOpen ? 'ABIERTO' : 'CERRADO';
+                lbl.className = isOpen ? 'switch-label open' : 'switch-label closed';
             });
 
             const badge = document.getElementById('status-badge');
