@@ -87,38 +87,23 @@
             <h3>Disponibilidad Bancaria</h3>
             <div class="bank-row">
                 <span>🇻🇪 Banco de Venezuela (BDV)</span>
-                <div>
-                    <span id="status-bdv" style="margin-right: 15px;">---</span>
-                    <button class="btn-mini" onclick="toggleBank('BDV')">FORZAR</button>
-                </div>
+                <button id="sw-BDV" class="switch closed" onclick="toggleBank('BDV')">CERRADO</button>
             </div>
             <div class="bank-row">
                 <span>💰 Banco del Tesoro</span>
-                <div>
-                    <span id="status-tesoro" style="margin-right: 15px;">---</span>
-                    <button class="btn-mini" onclick="toggleBank('TESORO')">FORZAR</button>
-                </div>
+                <button id="sw-TESORO" class="switch closed" onclick="toggleBank('TESORO')">CERRADO</button>
             </div>
             <div class="bank-row">
                 <span>🏢 Banco BDT</span>
-                <div>
-                    <span id="status-bdt" style="margin-right: 15px;">---</span>
-                    <button class="btn-mini" onclick="toggleBank('BDT')">FORZAR</button>
-                </div>
+                <button id="sw-BDT" class="switch closed" onclick="toggleBank('BDT')">CERRADO</button>
             </div>
             <div class="bank-row">
                 <span>🏦 Banco Activo</span>
-                <div>
-                    <span id="status-activo" style="margin-right: 15px;">---</span>
-                    <button class="btn-mini" onclick="toggleBank('ACTIVO')">FORZAR</button>
-                </div>
+                <button id="sw-ACTIVO" class="switch closed" onclick="toggleBank('ACTIVO')">CERRADO</button>
             </div>
             <div class="bank-row">
                 <span>💎 Bancamiga</span>
-                <div>
-                    <span id="status-bancamiga" style="margin-right: 15px;">---</span>
-                    <button class="btn-mini" onclick="toggleBank('BANCAMIGA')">FORZAR</button>
-                </div>
+                <button id="sw-BANCAMIGA" class="switch closed" onclick="toggleBank('BANCAMIGA')">CERRADO</button>
             </div>
         </div>
 
@@ -154,12 +139,17 @@
             document.getElementById('bcv-val').innerText = state.bcvRate.toFixed(2) + ' Bs';
             document.getElementById('binance-val').innerText = (state.binanceRate || 0).toFixed(2) + ' Bs';
             document.getElementById('spread-val').innerText = (state.spread || 0).toFixed(2) + '%';
-            document.getElementById('status-bdv').innerText = state.bankStatuses['BDV'];
-            document.getElementById('status-tesoro').innerText = state.bankStatuses['TESORO'];
-            document.getElementById('status-bdt').innerText = state.bankStatuses['BDT'];
-            document.getElementById('status-activo').innerText = state.bankStatuses['ACTIVO'];
-            document.getElementById('status-bancamiga').innerText = state.bankStatuses['BANCAMIGA'];
             document.getElementById('last-update').innerText = 'Actualizado: ' + (state.lastUpdate || '---');
+
+            const banks = ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA'];
+            banks.forEach(id => {
+                const btn = document.getElementById(`sw-${id}`);
+                const status = state.bankStatuses[id];
+                const isOpen = status.includes('ABIERTO');
+                
+                btn.innerText = isOpen ? 'ABIERTO' : 'CERRADO';
+                btn.className = isOpen ? 'switch open' : 'switch closed';
+            });
 
             const badge = document.getElementById('status-badge');
             const btnToggle = document.getElementById('btn-toggle');
