@@ -38,6 +38,9 @@ let monitorState = {
 };
 
 let monitorInterval = null;
+let ninjaInterval = null;
+let lastLiquidityVolume = 0;
+let lastLiquidityAlert = 0;
 
 function addLog(msg) {
     const log = { time: new Date().toLocaleTimeString(), text: msg };
@@ -71,6 +74,53 @@ async function getBinanceRate() {
     } catch (e) {
         addLog(`❌ Error Binance: ${e.message}`);
         return monitorState.binanceRate;
+    }
+}
+
+async function checkLiquidity() {
+    if (!monitorState.isRunning) return;
+    try {
+        const payload = {
+            asset: 'USDT', fiat: 'VES', tradeType: 'SELL', 
+            merchantCheck: false, page: 1, rows: 10, payTypes: [], transAmount: "63500", publisherType: null
+        };
+        const res = await axios.post('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', payload);
+        const ads = res.data.data;
+        if (!ads || ads.length === 0) return;
+        
+        // Sumar todo el USDT disponible en los top 7 anuncios
+        const currentVolume = ads.slice(0, 7).reduce((acc, ad) => acc + parseFloat(ad.adv.tradableQuantity), 0);
+        
+        if (lastLiquidityVolume > 0 && currentVolume > 0) {
+            const drop = ((lastLiquidityVolume - currentVolume) / lastLiquidityVolume) * 100;
+            const now = Date.now();
+            
+            // Si la liquidez cae repentinamente más del 40%
+            if (drop >= 40 && (now - lastLiquidityAlert > 3600000)) { // 1 hora de cooldown para no spamear
+                lastLiquidityAlert = now;
+                addLog(`🚨 ALERTA NINJA: Caída de liquidez del -${drop.toFixed(1)}%`);
+                
+                const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
+                const alertMsg = `🚨 <b>¡ALERTA DE LIQUIDEZ P2P!</b> 🚨
+                
+El inventario de los comerciantes más baratos acaba de desplomarse un <b>${drop.toFixed(1)}%</b> repentinamente.
+
+🔻 <b>Volumen anterior:</b> ${lastLiquidityVolume.toFixed(0)} USDT
+📉 <b>Volumen actual:</b> ${currentVolume.toFixed(0)} USDT
+
+💡 <i>Recomendación: Si tienes USDT producto de la intervención bancaria de hoy, <b>ESPERA</b>. Al haber escasez, es muy probable que el precio del USDT suba temporalmente en las próximas horas.</i>
+
+<i>🕒 ${time}</i>`;
+
+                await sendTelegramAlert(alertMsg);
+            }
+        }
+        
+        // Actualizar la línea base
+        lastLiquidityVolume = currentVolume;
+        
+    } catch (e) {
+        // Ignorar fallos de red en el radar ninja
     }
 }
 
@@ -303,7 +353,9 @@ app.post('/api/start', (req, res) => {
         monitorState.isRunning = true;
         addLog('🚀 Monitor INICIADO por el usuario');
         runMonitor();
-        monitorInterval = setInterval(runMonitor, 5 * 60 * 1000);
+        monitorInterval = setInterval(runMonitor, monitorState.interval * 60 * 1000);
+        // Activar el radar ninja cada 60 segundos
+        ninjaInterval = setInterval(checkLiquidity, 60000);
     }
     res.json({ success: true, state: monitorState });
 });
@@ -311,6 +363,8 @@ app.post('/api/start', (req, res) => {
 app.post('/api/stop', (req, res) => {
     monitorState.isRunning = false;
     if (monitorInterval) clearInterval(monitorInterval);
+    if (ninjaInterval) clearInterval(ninjaInterval);
+    lastLiquidityVolume = 0; // resetear línea base
     addLog('🛑 Monitor DETENIDO por el usuario');
     res.json({ success: true, state: monitorState });
 });
