@@ -92,6 +92,14 @@
                 <span>💰 Banco del Tesoro</span>
                 <span id="status-tesoro">---</span>
             </div>
+            <div class="bank-row">
+                <span>🏢 Banco BDT</span>
+                <span id="status-bdt">---</span>
+            </div>
+            <div class="bank-row">
+                <span>🏦 Banco Activo</span>
+                <span id="status-activo">---</span>
+            </div>
         </div>
 
         <h3>Terminal de Actividad</h3>
@@ -116,6 +124,8 @@
             document.getElementById('spread-val').innerText = (state.spread || 0).toFixed(2) + '%';
             document.getElementById('status-bdv').innerText = state.bankStatuses['BDV'];
             document.getElementById('status-tesoro').innerText = state.bankStatuses['TESORO'];
+            document.getElementById('status-bdt').innerText = state.bankStatuses['BDT'];
+            document.getElementById('status-activo').innerText = state.bankStatuses['ACTIVO'];
             document.getElementById('last-update').innerText = 'Actualizado: ' + (state.lastUpdate || '---');
 
             const badge = document.getElementById('status-badge');

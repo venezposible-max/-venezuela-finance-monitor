@@ -25,7 +25,12 @@ let monitorState = {
     bcvRate: 571.75,
     binanceRate: 0,
     spread: 0,
-    bankStatuses: { 'BDV': 'CERRADO 🔴', 'TESORO': 'CERRADO 🔴' },
+    bankStatuses: { 
+        'BDV': 'CERRADO 🔴', 
+        'TESORO': 'CERRADO 🔴',
+        'BDT': 'CERRADO 🔴',
+        'ACTIVO': 'CERRADO 🔴'
+    },
     logs: []
 };
 
@@ -80,9 +85,17 @@ async function getTelegramData() {
                 if (isOpen) banks['BDV'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BDV'] = 'CERRADO 🔴';
             }
-            if (lowerText.includes('tesoro')) {
+            if (lowerText.includes('tesoro') || lowerText.includes('bt ')) {
                 if (isOpen) banks['TESORO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['TESORO'] = 'CERRADO 🔴';
+            }
+            if (lowerText.includes('bdt')) {
+                if (isOpen) banks['BDT'] = 'ABIERTO 🟢';
+                else if (isClosed) banks['BDT'] = 'CERRADO 🔴';
+            }
+            if (lowerText.includes('activo')) {
+                if (isOpen) banks['ACTIVO'] = 'ABIERTO 🟢';
+                else if (isClosed) banks['ACTIVO'] = 'CERRADO 🔴';
             }
         }
         return { rate: foundRate || monitorState.bcvRate, banks };
@@ -125,6 +138,8 @@ async function runMonitor() {
 🏛 <b>MERCADO CAMBIARIO:</b>
 🇻🇪 <b>Venezuela (BDV):</b> ${monitorState.bankStatuses['BDV']}
 💰 <b>Tesoro:</b> ${monitorState.bankStatuses['TESORO']}
+🏢 <b>BDT:</b> ${monitorState.bankStatuses['BDT']}
+🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}
 
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
 📐 <b>Spread (Brecha):</b> ${monitorState.spread.toFixed(2)}%
