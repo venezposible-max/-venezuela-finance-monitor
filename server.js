@@ -207,13 +207,8 @@ async function getTelegramData() {
         const messages = $('.tgme_widget_message_text').toArray();
         
         let foundRate = null;
-        let banks = { 
-            'BDV': 'CERRADO 🔴', 
-            'TESORO': 'CERRADO 🔴',
-            'BDT': 'CERRADO 🔴',
-            'ACTIVO': 'CERRADO 🔴',
-            'BANCAMIGA': 'CERRADO 🔴'
-        };
+        let banks = { ...monitorState.bankStatuses };
+
 
         // 1. Buscamos la Tasa de Intervención (Formato: TASA: 570,75 Bs.)
         for (let i = messages.length - 1; i >= 0; i--) {
