@@ -226,9 +226,10 @@ async function getTelegramData() {
         }
 
         // 2. Estado de Bancos (Detección por Emojis y Siglas)
-        const recentMessages = messages.slice(-10);
-        for (let i = 0; i < recentMessages.length; i++) {
-            const text = $(recentMessages[i]).text().toUpperCase();
+        // Analizamos todos los mensajes cargados en la página (de más viejo a más nuevo)
+        // para que si el servidor se reinicia, pueda reconstruir la historia del día.
+        for (let i = 0; i < messages.length; i++) {
+            const text = $(messages[i]).text().toUpperCase();
             // Eliminamos "ACTIVO" como palabra clave de apertura porque choca con "Banco Activo"
             const isOpen = text.includes('💸✔️') || text.includes('ABRIÓ') || text.includes('INICIÓ') || text.includes('ACTIVA');
             const isClosed = text.includes('🚫') || text.includes('CERRADO') || text.includes('CERRADA') || text.includes('FINALIZÓ') || text.includes('TERMINÓ');
