@@ -69,10 +69,11 @@ async function getBinanceRate() {
         if (!ads || ads.length === 0) return monitorState.binanceRate;
         
         const prices = ads.slice(0, 5).map(ad => parseFloat(ad.adv.price));
-        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+        // Usamos el 3er precio (la mediana de los top 5) para eludir anuncios falsos/trampa con precios inflados
+        const medianPrice = prices.length >= 3 ? prices[2] : prices[0];
         
-        addLog(`📊 Binance P2P: Precio de mercado actualizado (${avg.toFixed(2)})`);
-        return avg;
+        addLog(`📊 Binance P2P: Precio de mercado actualizado (${medianPrice.toFixed(2)})`);
+        return medianPrice;
     } catch (e) {
         addLog(`❌ Error Binance: ${e.message}`);
         return monitorState.binanceRate;
@@ -89,10 +90,10 @@ async function checkLiquidity() {
         const ads = res.data.data;
         if (!ads || ads.length === 0) return;
         
-        // Obtener el precio promedio de los top 5 anuncios
+        // Obtener el precio promedio usando la mediana para evitar picos falsos
         const topAdsPrice = ads.slice(0, 5);
         const prices = topAdsPrice.map(ad => parseFloat(ad.adv.price));
-        const currentPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+        const currentPrice = prices.length >= 3 ? prices[2] : prices[0];
 
         // Sumar todo el USDT disponible en los top 7 anuncios
         const currentVolume = ads.slice(0, 7).reduce((acc, ad) => acc + parseFloat(ad.adv.tradableQuantity), 0);
@@ -119,6 +120,9 @@ El dólar en Binance P2P acaba de dar un fuerte salto hacia arriba (<b>+${priceI
 
 <i>🕒 ${time}</i>`;
                 await sendTelegramAlert(alertMsgPrice);
+                
+                // Forzar un reporte normal inmediatamente
+                runMonitor();
             }
         }
         
@@ -141,6 +145,9 @@ El inventario de los comerciantes más baratos acaba de desplomarse un <b>${drop
 
 <i>🕒 ${time}</i>`;
                 await sendTelegramAlert(alertMsgLiq);
+                
+                // Forzar un reporte normal inmediatamente
+                runMonitor();
             }
         }
         
@@ -185,6 +192,9 @@ async function checkBankStatus() {
             const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
             const finalAlert = `🔔 <b>¡ALERTA DE MERCADO BANCARIO!</b> 🔔\n\nSe acaba de detectar un cambio en la disponibilidad de intervención:\n\n${alertMessages.join('\n')}\n\n<i>🕒 ${time}</i>`;
             await sendTelegramAlert(finalAlert);
+            
+            // Forzar un reporte normal inmediatamente
+            runMonitor();
         }
 
     } catch (e) {}
