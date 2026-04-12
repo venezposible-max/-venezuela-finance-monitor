@@ -236,7 +236,7 @@ async function getTelegramData() {
             const text = $(recentMessages[i]).text().toUpperCase();
             // Eliminamos "ACTIVO" como palabra clave de apertura porque choca con "Banco Activo"
             const isOpen = text.includes('💸✔️') || text.includes('ABRIÓ') || text.includes('INICIÓ') || text.includes('ACTIVA');
-            const isClosed = text.includes('🚫') || text.includes('CERRADO') || text.includes('FINALIZÓ') || text.includes('TERMINÓ');
+            const isClosed = text.includes('🚫') || text.includes('CERRADO') || text.includes('CERRADA') || text.includes('FINALIZÓ') || text.includes('TERMINÓ');
 
             if (text.includes('BDV') || text.includes('VENEZUELA')) {
                 if (isOpen) banks['BDV'] = 'ABIERTO 🟢';
