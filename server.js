@@ -153,6 +153,43 @@ El inventario de los comerciantes más baratos acaba de desplomarse un <b>${drop
     }
 }
 
+async function checkBankStatus() {
+    try {
+        const telegram = await getTelegramData();
+        const newBanks = telegram.banks;
+        let alertMessages = [];
+
+        const bankNames = {
+            'BDV': '🇻🇪 Banco de Venezuela (BDV)',
+            'TESORO': '💰 Banco del Tesoro',
+            'BDT': '🏢 BDT',
+            'ACTIVO': '🏦 Banco Activo',
+            'BANCAMIGA': '💎 Bancamiga'
+        };
+
+        for (const [bankId, newStatus] of Object.entries(newBanks)) {
+            // No alertar si el banco está forzado manualmente
+            if (monitorState.manualOverrides.includes(bankId)) continue;
+            
+            const oldStatus = monitorState.bankStatuses[bankId];
+            if (oldStatus && oldStatus !== newStatus) {
+                // Cambio detectado!
+                monitorState.bankStatuses[bankId] = newStatus;
+                addLog(`🔔 NINJA BANCARIO: ${bankId} cambió a ${newStatus}`);
+                alertMessages.push(`• <b>${bankNames[bankId]}</b> cambió a: <b>${newStatus}</b>`);
+            }
+        }
+
+        if (alertMessages.length > 0) {
+            io.emit('state_update', monitorState);
+            const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
+            const finalAlert = `🔔 <b>¡ALERTA DE MERCADO BANCARIO!</b> 🔔\n\nSe acaba de detectar un cambio en la disponibilidad de intervención:\n\n${alertMessages.join('\n')}\n\n<i>🕒 ${time}</i>`;
+            await sendTelegramAlert(finalAlert);
+        }
+
+    } catch (e) {}
+}
+
 async function getTelegramData() {
     try {
         const res = await axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`);
@@ -187,7 +224,8 @@ async function getTelegramData() {
         const recentMessages = messages.slice(-10);
         for (let i = 0; i < recentMessages.length; i++) {
             const text = $(recentMessages[i]).text().toUpperCase();
-            const isOpen = text.includes('💸✔️') || text.includes('ACTIVO') || text.includes('ABRIÓ') || text.includes('INICIÓ');
+            // Eliminamos "ACTIVO" como palabra clave de apertura porque choca con "Banco Activo"
+            const isOpen = text.includes('💸✔️') || text.includes('ABRIÓ') || text.includes('INICIÓ') || text.includes('ACTIVA');
             const isClosed = text.includes('🚫') || text.includes('CERRADO') || text.includes('FINALIZÓ') || text.includes('TERMINÓ');
 
             if (text.includes('BDV') || text.includes('VENEZUELA')) {
@@ -398,7 +436,11 @@ server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     
     // El Radar Ninja inicia automáticamente al arrancar el servidor (24/7)
-    addLog('🥷 Radar Ninja de Liquidez P2P activado en segundo plano (24/7)');
-    ninjaInterval = setInterval(checkLiquidity, 60000);
+    addLog('🥷 Radars Ninjas activados en segundo plano (24/7)');
+    ninjaInterval = setInterval(() => {
+        checkLiquidity();
+        checkBankStatus();
+    }, 60000);
     checkLiquidity(); // Ejecución inicial
+    checkBankStatus(); // Ejecución inicial
 });
