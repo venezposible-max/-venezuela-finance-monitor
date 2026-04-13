@@ -216,6 +216,7 @@
                 <select id="calc-bank">
                     <option value="BDV">🇻🇪 BDV (2.5%)</option>
                     <option value="TESORO">💰 Tesoro (2.5%)</option>
+                    <option value="ACTIVO">🏦 Activo (1.5%)</option>
                     <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
                 </select>
                 <input type="number" id="calc-usdt" placeholder="Cantidad USDT" value="100">
@@ -376,6 +377,7 @@
         const COMISIONES = {
             BDV: { bancaria: 2.5, binance: 3.3 },
             TESORO: { bancaria: 2.5, binance: 3.3 },
+            ACTIVO: { bancaria: 1.5, binance: 3.3 },
             BANCAMIGA: { bancaria: 5, binance: 3.3 }
         };
 

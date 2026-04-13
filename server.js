@@ -341,6 +341,7 @@ async function runMonitor() {
 🧮 <b>ARBITRAJE — Base 100 USDT</b>
 ${calcReport(bcv, binance, 'BDV', 2.5, 3.3)}
 ${calcReport(bcv, binance, 'Tesoro', 2.5, 3.3)}
+${calcReport(bcv, binance, 'Activo', 1.5, 3.3)}
 ${calcReport(bcv, binance, 'Bancamiga', 5, 3.3)}
 
 🔗 <a href="https://venezuela-finance-monitor-production.up.railway.app/calc.html">Calcula tu monto aquí</a>
