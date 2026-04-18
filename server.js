@@ -101,27 +101,29 @@ async function checkLiquidity() {
         const now = Date.now();
         const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
 
-        // --- 1. SENSOR DE PRECIO ALCISTA (Salto >= 0.63%) ---
+        // --- 1. SENSOR DE SUBIDA REPENTINA (Aumento >= 1 Bs) ---
         if (lastNinjaPrice > 0 && currentPrice > 0) {
-            const priceIncrease = ((currentPrice - lastNinjaPrice) / lastNinjaPrice) * 100;
+            const priceJump = currentPrice - lastNinjaPrice;
+            const priceIncrease = (priceJump / lastNinjaPrice) * 100;
             
-            if (priceIncrease >= 0.63 && (now - lastPriceAlert > 3600000)) { // 1 hora de cooldown
+            if (priceJump >= 1 && (now - lastPriceAlert > 900000)) { // 15 min de cooldown
                 lastPriceAlert = now;
-                addLog(`🚨 ALERTA NINJA: Salto alcista del +${priceIncrease.toFixed(2)}%`);
+                addLog(`🚨 SUBIDA REPENTINA: +${priceJump.toFixed(2)} Bs (${priceIncrease.toFixed(2)}%)`);
                 
-                const alertMsgPrice = `🚀 <b>¡ALERTA DE PRECIO ALCISTA!</b> 🚀
-                
-El dólar en Binance P2P acaba de dar un fuerte salto hacia arriba (<b>+${priceIncrease.toFixed(2)}%</b> repentino).
+                const alertMsgPrice = `🚨 <b>¡SUBIDA REPENTINA DEL USDT!</b> 🚨
+
+El precio del USDT en Binance P2P acaba de subir <b>+${priceJump.toFixed(2)} Bs</b> (<b>+${priceIncrease.toFixed(2)}%</b>).
 
 💵 <b>Precio anterior:</b> ${lastNinjaPrice.toFixed(2)} Bs
 🔥 <b>Precio actual:</b> ${currentPrice.toFixed(2)} Bs
+📈 <b>Salto:</b> +${priceJump.toFixed(2)} Bs
 
-💡 <i>Recomendación: ¡Excelente momento para vender USDT y aumentar el margen de tu arbitraje ahora mismo!</i>
+💡 <i>¡El dólar está subiendo! Buen momento para vender USDT y aprovechar el margen.</i>
 
 <i>🕒 ${time}</i>`;
                 await sendTelegramAlert(alertMsgPrice);
                 
-                // Forzar un reporte normal inmediatamente
+                // Forzar un reporte completo inmediatamente
                 runMonitor();
             }
         }
