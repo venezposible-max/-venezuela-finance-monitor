@@ -308,7 +308,7 @@ async function runMonitor() {
         const ganancia = usdtFinal - usdt;
         const pct = (ganancia / usdt * 100).toFixed(2);
         const emoji = ganancia >= 0 ? '🟢' : '🔴';
-        return `${emoji} <b>${bankName}</b> (${comBank}%): ${usdtFinal.toFixed(2)} USDT → <b>+${ganancia.toFixed(2)} USDT (${pct}%)</b>`;
+        return `${emoji} <b>${bankName}</b> (${comBank}% | Bpay/Gpay: ${comBin}%): ${usdtFinal.toFixed(2)} USDT → <b>+${ganancia.toFixed(2)} USDT (${pct}%)</b>`;
     }
 
     if (binance > 0) {
@@ -341,7 +341,8 @@ async function runMonitor() {
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
 
 🧮 <b>ARBITRAJE — Base 100 USDT</b>
-${calcReport(bcv, binance, 'BDV', 2.5, 3.3)}
+${calcReport(bcv, binance, 'BDV (Digital)', 2.5, 3.3)}
+${calcReport(bcv, binance, 'BDV (Física)', 1.5, 3.3)}
 ${calcReport(bcv, binance, 'Tesoro', 2.5, 3.3)}
 ${calcReport(bcv, binance, 'Activo', 1.5, 3.3)}
 ${calcReport(bcv, binance, 'Bancamiga', 5, 3.3)}
