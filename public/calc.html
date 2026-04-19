@@ -96,7 +96,8 @@
         <div class="calc-box">
             <div class="calc-inputs">
                 <select id="calc-bank">
-                    <option value="BDV">🇻🇪 BDV (2.5%)</option>
+                    <option value="BDV_FISICA">🇻🇪 BDV (Física 1.5%)</option>
+                    <option value="BDV_VIRTUAL">🇻🇪 BDV (Virtual 2.5%)</option>
                     <option value="TESORO">💰 Tesoro (2.5%)</option>
                     <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
                 </select>
@@ -129,7 +130,8 @@
         let bcvRate = 0, binanceRate = 0;
 
         const COMISIONES = {
-            BDV: { bancaria: 2.5, binance: 3.3 },
+            BDV_FISICA: { bancaria: 1.5, binance: 3.3 },
+            BDV_VIRTUAL: { bancaria: 2.5, binance: 3.3 },
             TESORO: { bancaria: 2.5, binance: 3.3 },
             BANCAMIGA: { bancaria: 5, binance: 3.3 }
         };
