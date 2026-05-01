@@ -3,3 +3,4 @@ node_modules
 *.log
 telegram.html
 debug.js
+.vercel
