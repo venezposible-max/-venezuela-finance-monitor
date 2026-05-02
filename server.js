@@ -1,9 +1,13 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const { Server } = require('socket.io');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const path = require('path');
+
+// Agent para BCV (SSL sin verificación estricta)
+const insecureAgent = new https.Agent({ rejectUnauthorized: false });
 
 const app = express();
 const server = http.createServer(app);
@@ -32,6 +36,7 @@ let monitorState = {
         'ACTIVO': 'CERRADO 🔴',
         'BANCAMIGA': 'CERRADO 🔴'
     },
+    dataSources: { bcv: '---', bdv: '---', telegram: '---' }, // Estado de cada fuente
     manualOverrides: [], 
     interval: 5, // Intervalo en minutos
     logs: []
@@ -164,8 +169,8 @@ El inventario de los comerciantes más baratos acaba de desplomarse un <b>${drop
 
 async function checkBankStatus() {
     try {
-        const telegram = await getTelegramData();
-        const newBanks = telegram.banks;
+        const data = await getMultiSourceData();
+        const newBanks = data.banks;
         let alertMessages = [];
 
         const bankNames = {
@@ -177,15 +182,14 @@ async function checkBankStatus() {
         };
 
         for (const [bankId, newStatus] of Object.entries(newBanks)) {
-            // No alertar si el banco está forzado manualmente
             if (monitorState.manualOverrides.includes(bankId)) continue;
             
             const oldStatus = monitorState.bankStatuses[bankId];
             if (oldStatus && oldStatus !== newStatus) {
-                // Cambio detectado!
                 monitorState.bankStatuses[bankId] = newStatus;
-                addLog(`🔔 NINJA BANCARIO: ${bankId} cambió a ${newStatus}`);
-                alertMessages.push(`• <b>${bankNames[bankId]}</b> cambió a: <b>${newStatus}</b>`);
+                const source = (bankId === 'BDV' && monitorState.dataSources.bdv === '✅') ? '(vía Web BDV)' : '(vía Telegram)';
+                addLog(`🔔 NINJA BANCARIO: ${bankId} cambió a ${newStatus} ${source}`);
+                alertMessages.push(`• <b>${bankNames[bankId]}</b> cambió a: <b>${newStatus}</b> ${source}`);
             }
         }
 
@@ -194,23 +198,92 @@ async function checkBankStatus() {
             const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
             const finalAlert = `🔔 <b>¡ALERTA DE MERCADO BANCARIO!</b> 🔔\n\nSe acaba de detectar un cambio en la disponibilidad de intervención:\n\n${alertMessages.join('\n')}\n\n<i>🕒 ${time}</i>`;
             await sendTelegramAlert(finalAlert);
-            
-            // Forzar un reporte normal inmediatamente
             runMonitor();
         }
 
     } catch (e) {}
 }
 
+// ===== FUENTE 1: BCV DIRECTO (Tasa Oficial) =====
+async function getBCVRate() {
+    try {
+        const res = await axios.get('https://www.bcv.org.ve', {
+            timeout: 12000, httpsAgent: insecureAgent,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        });
+        const $ = cheerio.load(res.data);
+        const dolarText = $('#dolar').text().trim();
+        const match = dolarText.match(/(\d{2,3}[.,]\d{2,8})/);
+        if (match) {
+            const rate = parseFloat(match[1].replace(',', '.'));
+            if (rate > 50 && rate < 1000) {
+                monitorState.dataSources.bcv = '✅';
+                addLog(`🏛 BCV Directo: Tasa oficial USD = ${rate.toFixed(2)} Bs`);
+                return rate;
+            }
+        }
+        monitorState.dataSources.bcv = '⚠️';
+        return null;
+    } catch (e) {
+        monitorState.dataSources.bcv = '❌';
+        addLog(`⚠️ BCV web inaccesible: ${e.message.substring(0, 50)}`);
+        return null;
+    }
+}
+
+// ===== FUENTE 2: BDV WEB (Menudeo Abierto/Cerrado) =====
+async function checkBDVWeb() {
+    try {
+        const res = await axios.get('https://www.bancodevenezuela.com', {
+            timeout: 12000,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        });
+        const $ = cheerio.load(res.data);
+        
+        // BDV tiene sección "Menudeo (USD-EUR)" con "Compra: $ X.XX / € X.XX"
+        // Cuando está CERRADO los valores están vacíos: "Compra: $  / €"
+        // Cuando está ABIERTO tiene números: "Compra: $ 570.75 / € 650.20"
+        const bodyText = $('body').text();
+        const menudeoMatch = bodyText.match(/Menudeo[\s\S]*?Compra:\s*\$\s*([\d.,]*)\s*\//);
+        
+        if (menudeoMatch) {
+            const priceStr = menudeoMatch[1].trim();
+            const hasPrice = priceStr.length > 0 && parseFloat(priceStr.replace(',', '.')) > 0;
+            monitorState.dataSources.bdv = '✅';
+            if (hasPrice) {
+                addLog(`🏦 BDV Web: Menudeo ABIERTO (Compra: $${priceStr})`);
+                return 'ABIERTO 🟢';
+            } else {
+                return 'CERRADO 🔴';
+            }
+        }
+        
+        // Fallback: buscar "Mesa de cambio" con valores
+        const mesaMatch = bodyText.match(/BDV:\s*\$\s*([\d.,]*)\s*\//);
+        if (mesaMatch) {
+            const priceStr = mesaMatch[1].trim();
+            const hasPrice = priceStr.length > 0 && parseFloat(priceStr.replace(',', '.')) > 0;
+            monitorState.dataSources.bdv = '✅';
+            return hasPrice ? 'ABIERTO 🟢' : 'CERRADO 🔴';
+        }
+        
+        monitorState.dataSources.bdv = '⚠️';
+        return null; // No se pudo determinar
+    } catch (e) {
+        monitorState.dataSources.bdv = '❌';
+        return null;
+    }
+}
+
+// ===== FUENTE 3: TELEGRAM @E_positivo (Todos los bancos) =====
 async function getTelegramData() {
     try {
-        const res = await axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`);
+        const res = await axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`, { timeout: 10000 });
         const $ = cheerio.load(res.data);
         const messages = $('.tgme_widget_message_text').toArray();
         
         let foundRate = null;
         let banks = { ...monitorState.bankStatuses };
-
 
         // 1. Buscamos la Tasa de Intervención (Formato: TASA: 570,75 Bs.)
         for (let i = messages.length - 1; i >= 0; i--) {
@@ -221,18 +294,14 @@ async function getTelegramData() {
                     const val = parseFloat(matches[1].replace(',', '.'));
                     if (val > 400 && val < 1000) {
                         foundRate = val;
-                        addLog(`💎 Tasa de Intervención detectada: ${val} Bs.`);
                     }
                 }
             }
         }
 
         // 2. Estado de Bancos (Detección por Emojis y Siglas)
-        // Analizamos todos los mensajes cargados en la página (de más viejo a más nuevo)
-        // para que si el servidor se reinicia, pueda reconstruir la historia del día.
         for (let i = 0; i < messages.length; i++) {
             const text = $(messages[i]).text().toUpperCase();
-            // Eliminamos "ACTIVO" como palabra clave de apertura porque choca con "Banco Activo"
             const isOpen = text.includes('💸✔️') || text.includes('ABRIÓ') || text.includes('INICIÓ') || text.includes('ACTIVA');
             const isClosed = text.includes('🚫') || text.includes('CERRADO') || text.includes('CERRADA') || text.includes('FINALIZÓ') || text.includes('TERMINÓ');
 
@@ -258,25 +327,63 @@ async function getTelegramData() {
             }
         }
 
-        // 3. Respetar Overrides Manuales (no sobrescribir si el banco está en modo manual)
-        for (const bankId of monitorState.manualOverrides) {
-            banks[bankId] = monitorState.bankStatuses[bankId];
-        }
-
-        // 4. Hora oficial de Venezuela (VET)
-        monitorState.lastUpdate = new Date().toLocaleTimeString('es-VE', { 
-            timeZone: 'America/Caracas',
-            hour12: true,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-
-        return { rate: foundRate || monitorState.bcvRate, banks };
+        monitorState.dataSources.telegram = '✅';
+        return { rate: foundRate, banks };
     } catch (e) {
+        monitorState.dataSources.telegram = '❌';
         addLog(`❌ Error Telegram: ${e.message}`);
-        return { rate: monitorState.bcvRate, banks: monitorState.bankStatuses };
+        return { rate: null, banks: null };
     }
+}
+
+// ===== ORQUESTADOR MULTI-FUENTE =====
+async function getMultiSourceData() {
+    // Lanzar las 3 fuentes en paralelo para máxima velocidad
+    const [bcvRate, bdvStatus, telegram] = await Promise.all([
+        getBCVRate(),
+        checkBDVWeb(),
+        getTelegramData()
+    ]);
+
+    let banks = { ...monitorState.bankStatuses };
+    let rate = monitorState.bcvRate;
+
+    // --- TASA: Prioridad BCV directo > Telegram ---
+    if (bcvRate) {
+        rate = bcvRate;
+    } else if (telegram.rate) {
+        rate = telegram.rate;
+        addLog(`💎 Tasa de Intervención (vía Telegram): ${telegram.rate} Bs.`);
+    }
+
+    // --- BANCOS: Mezclar fuentes (web directo tiene prioridad) ---
+    // Primero aplicar Telegram como base
+    if (telegram.banks) {
+        banks = { ...banks, ...telegram.banks };
+    }
+    // BDV web directo sobreescribe Telegram (más confiable)
+    if (bdvStatus) {
+        banks['BDV'] = bdvStatus;
+    }
+
+    // Respetar Overrides Manuales
+    for (const bankId of monitorState.manualOverrides) {
+        banks[bankId] = monitorState.bankStatuses[bankId];
+    }
+
+    // Hora oficial de Venezuela (VET)
+    monitorState.lastUpdate = new Date().toLocaleTimeString('es-VE', { 
+        timeZone: 'America/Caracas',
+        hour12: true,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+
+    const sourceLog = `📡 Fuentes: BCV=${monitorState.dataSources.bcv} | BDV=${monitorState.dataSources.bdv} | TG=${monitorState.dataSources.telegram}`;
+    addLog(sourceLog);
+
+    return { rate, banks };
 }
 
 async function sendTelegramAlert(message) {
@@ -292,11 +399,12 @@ async function sendTelegramAlert(message) {
 async function runMonitor() {
     if (!monitorState.isRunning) return;
     
-    addLog('🔍 Escaneando mercados...');
-    const binance = await getBinanceRate();
-    const telegram = await getTelegramData();
+    addLog('🔍 Escaneando mercados (multi-fuente)...');
+    const [binance, multiData] = await Promise.all([
+        getBinanceRate(),
+        getMultiSourceData()
+    ]);
 
-    // Función para calcular arbitraje por banco
     function calcReport(bcv, bin, bankName, comBank, comBin) {
         const usdt = 100;
         const bs = usdt * bin;
@@ -313,9 +421,9 @@ async function runMonitor() {
 
     if (binance > 0) {
         monitorState.binanceRate = binance;
-        monitorState.bcvRate = telegram.rate;
-        monitorState.bankStatuses = telegram.banks;
-        monitorState.spread = ((binance - telegram.rate) / telegram.rate) * 100;
+        monitorState.bcvRate = multiData.rate;
+        monitorState.bankStatuses = multiData.banks;
+        monitorState.spread = ((binance - multiData.rate) / multiData.rate) * 100;
         monitorState.lastUpdate = new Date().toLocaleTimeString('es-VE', { 
             timeZone: 'America/Caracas',
             hour12: true,
@@ -324,6 +432,7 @@ async function runMonitor() {
         });
 
         const bcv = monitorState.bcvRate;
+        const src = monitorState.dataSources;
         const report = `
 📊 <b>MONITOR DE ECONOMÍA VENEZUELA</b>
 ⏱ <i>Actualización: ${monitorState.lastUpdate}</i>
@@ -347,6 +456,7 @@ ${calcReport(bcv, binance, 'Tesoro', 2.5, 3.6)}
 ${calcReport(bcv, binance, 'Activo', 1.5, 3.6)}
 ${calcReport(bcv, binance, 'Bancamiga', 5, 3.6)}
 
+📡 <i>Fuentes: BCV=${src.bcv} BDV=${src.bdv} TG=${src.telegram}</i>
 🔗 <a href="https://venezuela-finance-monitor-production.up.railway.app/calc.html">Calcula tu monto aquí</a>
         `;
 
