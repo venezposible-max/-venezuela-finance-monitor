@@ -348,12 +348,13 @@ async function getMultiSourceData() {
     let banks = { ...monitorState.bankStatuses };
     let rate = monitorState.bcvRate;
 
-    // --- TASA: Prioridad BCV directo > Telegram ---
-    if (bcvRate) {
-        rate = bcvRate;
-    } else if (telegram.rate) {
+    // --- TASA: Prioridad Telegram (Intervención) > BCV directo (Oficial) ---
+    if (telegram.rate) {
         rate = telegram.rate;
         addLog(`💎 Tasa de Intervención (vía Telegram): ${telegram.rate} Bs.`);
+    } else if (bcvRate) {
+        rate = bcvRate;
+        addLog(`🏛 Usando Tasa Oficial BCV como respaldo: ${bcvRate} Bs.`);
     }
 
     // --- BANCOS: Mezclar fuentes (web directo tiene prioridad) ---
