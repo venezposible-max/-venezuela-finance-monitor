@@ -26,7 +26,7 @@ const CHAT_ID = process.env.CHAT_ID || '-1003812445382';
 let monitorState = {
     isRunning: false,
     lastUpdate: null,
-    bcvRate: 570.75,
+    bcvRate: 611,
     binanceRate: 639.00,
     spread: 0,
     bankStatuses: { 
