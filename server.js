@@ -432,12 +432,14 @@ async function runMonitor() {
         });
 
         const bcv = monitorState.bcvRate;
+        const effectiveBcv = bcv * 1.005;
+        const bcvStr = `${bcv.toFixed(2)} + Com: 0.5% (Total: ${effectiveBcv.toFixed(2)})`;
         const src = monitorState.dataSources;
         const report = `
 📊 <b>MONITOR DE ECONOMÍA VENEZUELA</b>
 ⏱ <i>Actualización: ${monitorState.lastUpdate}</i>
 
-🏦 <b>BCV (Intervención):</b> ${bcv.toFixed(2)} VES
+🏦 <b>BCV (Intervención):</b> ${bcvStr} VES
 
 🏛 <b>MERCADO CAMBIARIO:</b>
 🇻🇪 <b>Venezuela (BDV):</b> ${monitorState.bankStatuses['BDV']}
@@ -450,11 +452,11 @@ async function runMonitor() {
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
 
 🧮 <b>ARBITRAJE — Base 100 USDT</b>
-${calcReport(bcv, binance, 'BDV (Digital)', 2.5, 3.6)}
-${calcReport(bcv, binance, 'BDV (Física)', 1.5, 3.6)}
-${calcReport(bcv, binance, 'Tesoro', 2.5, 3.6)}
-${calcReport(bcv, binance, 'Activo', 1.5, 3.6)}
-${calcReport(bcv, binance, 'Bancamiga', 5, 3.6)}
+${calcReport(effectiveBcv, binance, 'BDV (Digital)', 2.5, 3.6)}
+${calcReport(effectiveBcv, binance, 'BDV (Física)', 1.5, 3.6)}
+${calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6)}
+${calcReport(effectiveBcv, binance, 'Activo', 1.5, 3.6)}
+${calcReport(effectiveBcv, binance, 'Bancamiga', 5, 3.6)}
 
 📡 <i>Fuentes: BCV=${src.bcv} BDV=${src.bdv} TG=${src.telegram}</i>
 🔗 <a href="https://venezuela-finance-monitor-production.up.railway.app/calc.html">Calcula tu monto aquí</a>
