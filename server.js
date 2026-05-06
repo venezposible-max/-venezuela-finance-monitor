@@ -293,7 +293,7 @@ async function getTelegramData() {
                 const matches = text.match(/TASA:\s*(\d{2,3}[\.,]\d{2})/i);
                 if (matches && !foundRate) {
                     const val = parseFloat(matches[1].replace(',', '.'));
-                    if (val > 400 && val < 1000) {
+                    if (val > 600 && val < 1500) {
                         foundRate = val;
                     }
                 }
