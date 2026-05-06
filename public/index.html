@@ -207,6 +207,17 @@
                     </label>
                 </div>
             </div>
+            <div class="bank-row">
+                <span>💙 Banco Provincial</span>
+                <div class="switch-container">
+                    <button class="btn-mini" onclick="setAuto('PROVINCIAL')" style="margin-right:10px">AUTO 🤖</button>
+                    <span id="lbl-PROVINCIAL" class="switch-label closed">CERRADO</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="sw-PROVINCIAL" onchange="toggleBank('PROVINCIAL')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
         </div>
 
         <!-- Calculadora de Arbitraje -->
@@ -218,6 +229,7 @@
                     <option value="TESORO">💰 Tesoro (2.5%)</option>
                     <option value="ACTIVO">🏦 Activo (1.5%)</option>
                     <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
+                    <option value="PROVINCIAL">💙 Provincial (0%)</option>
                 </select>
                 <input type="number" id="calc-usdt" placeholder="Cantidad USDT" value="100">
             </div>
@@ -285,7 +297,7 @@
             document.getElementById('spread-val').innerText = (state.spread || 0).toFixed(2) + '%';
             document.getElementById('last-update').innerText = 'Actualizado: ' + (state.lastUpdate || '---');
 
-            const banks = ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA'];
+            const banks = ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA', 'PROVINCIAL'];
             banks.forEach(id => {
                 const sw = document.getElementById(`sw-${id}`);
                 const lbl = document.getElementById(`lbl-${id}`);
@@ -378,7 +390,8 @@
             BDV: { bancaria: 2.5, binance: 3.6 },
             TESORO: { bancaria: 2.5, binance: 3.6 },
             ACTIVO: { bancaria: 1.5, binance: 3.6 },
-            BANCAMIGA: { bancaria: 5, binance: 3.6 }
+            BANCAMIGA: { bancaria: 5, binance: 3.6 },
+            PROVINCIAL: { bancaria: 0, binance: 3.6 }
         };
 
         function calcArbitrage() {

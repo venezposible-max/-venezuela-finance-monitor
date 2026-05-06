@@ -34,7 +34,8 @@ let monitorState = {
         'TESORO': 'CERRADO 🔴',
         'BDT': 'CERRADO 🔴',
         'ACTIVO': 'CERRADO 🔴',
-        'BANCAMIGA': 'CERRADO 🔴'
+        'BANCAMIGA': 'CERRADO 🔴',
+        'PROVINCIAL': 'CERRADO 🔴'
     },
     dataSources: { bcv: '---', bdv: '---', telegram: '---' }, // Estado de cada fuente
     manualOverrides: [], 
@@ -325,6 +326,10 @@ async function getTelegramData() {
                 if (isOpen) banks['BANCAMIGA'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BANCAMIGA'] = 'CERRADO 🔴';
             }
+            if (text.includes('PROVINCIAL')) {
+                if (isOpen) banks['PROVINCIAL'] = 'ABIERTO 🟢';
+                else if (isClosed) banks['PROVINCIAL'] = 'CERRADO 🔴';
+            }
         }
 
         monitorState.dataSources.telegram = '✅';
@@ -447,6 +452,7 @@ async function runMonitor() {
 🏢 <b>BDT:</b> ${monitorState.bankStatuses['BDT']}
 🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}
 💎 <b>Bancamiga:</b> ${monitorState.bankStatuses['BANCAMIGA']}
+💙 <b>Provincial:</b> ${monitorState.bankStatuses['PROVINCIAL']}
 
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
@@ -457,6 +463,7 @@ ${calcReport(effectiveBcv, binance, 'BDV (Física)', 1.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Activo', 1.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Bancamiga', 5, 3.6)}
+${calcReport(effectiveBcv, binance, 'Provincial', 0, 3.6)}
 
 📡 <i>Fuentes: BCV=${src.bcv} BDV=${src.bdv} TG=${src.telegram}</i>
 🔗 <a href="https://venezuela-finance-monitor-production.up.railway.app/calc.html">Calcula tu monto aquí</a>
