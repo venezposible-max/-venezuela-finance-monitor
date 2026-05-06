@@ -35,12 +35,7 @@ let monitorState = {
         'BDT': 'CERRADO 🔴',
         'ACTIVO': 'CERRADO 🔴',
         'BANCAMIGA': 'CERRADO 🔴',
-        'PROVINCIAL': 'CERRADO 🔴',
-        'BNC': 'CERRADO 🔴',
-        'BFC': 'CERRADO 🔴',
-        'BANPLUS': 'CERRADO 🔴',
-        'PLAZA': 'CERRADO 🔴',
-        'EXTERIOR': 'CERRADO 🔴'
+        'PROVINCIAL': 'CERRADO 🔴'
     },
     dataSources: { bcv: '---', bdv: '---', telegram: '---' }, // Estado de cada fuente
     manualOverrides: [], 
@@ -185,12 +180,7 @@ async function checkBankStatus() {
             'BDT': '🏢 BDT',
             'ACTIVO': '🏦 Banco Activo',
             'BANCAMIGA': '💎 Bancamiga',
-            'PROVINCIAL': '💙 BBVA Provincial',
-            'BNC': '🏛 BNC',
-            'BFC': '🏥 BFC',
-            'BANPLUS': '➕ Banplus',
-            'PLAZA': '🏢 Plaza',
-            'EXTERIOR': '😴 Exterior'
+            'PROVINCIAL': '💙 BBVA Provincial'
         };
 
         for (const [bankId, newStatus] of Object.entries(newBanks)) {
@@ -337,29 +327,9 @@ async function getTelegramData() {
                 if (isOpen) banks['BANCAMIGA'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BANCAMIGA'] = 'CERRADO 🔴';
             }
-            if (text.includes('PROVINCIAL') || text.includes('BBVA')) {
+            if (text.includes('PROVINCIAL') || text.includes('BBVA') || text.includes('☺️BBVA')) {
                 if (isOpen) banks['PROVINCIAL'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['PROVINCIAL'] = 'CERRADO 🔴';
-            }
-            if (text.includes('BNC')) {
-                if (isOpen) banks['BNC'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['BNC'] = 'CERRADO 🔴';
-            }
-            if (text.includes('BFC')) {
-                if (isOpen) banks['BFC'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['BFC'] = 'CERRADO 🔴';
-            }
-            if (text.includes('BANPLUS')) {
-                if (isOpen) banks['BANPLUS'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['BANPLUS'] = 'CERRADO 🔴';
-            }
-            if (text.includes('PLAZA')) {
-                if (isOpen) banks['PLAZA'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['PLAZA'] = 'CERRADO 🔴';
-            }
-            if (text.includes('EXTERIOR')) {
-                if (isOpen) banks['EXTERIOR'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['EXTERIOR'] = 'CERRADO 🔴';
             }
         }
 
@@ -495,11 +465,6 @@ ${calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Activo', 1.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Bancamiga', 5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Provincial', 0, 3.6)}
-${calcReport(effectiveBcv, binance, 'BNC', 0, 3.6)}
-${calcReport(effectiveBcv, binance, 'BFC', 0, 3.6)}
-${calcReport(effectiveBcv, binance, 'Banplus', 0, 3.6)}
-${calcReport(effectiveBcv, binance, 'Plaza', 0, 3.6)}
-${calcReport(effectiveBcv, binance, 'Exterior', 0, 3.6)}
 
 📡 <i>Fuentes: BCV=${src.bcv} BDV=${src.bdv} TG=${src.telegram}</i>
 🔗 <a href="https://venezuela-finance-monitor-production.up.railway.app/calc.html">Calcula tu monto aquí</a>
