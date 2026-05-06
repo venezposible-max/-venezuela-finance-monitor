@@ -17,6 +17,7 @@ const PORT = process.env.PORT || 3000;
 
 // --- CONFIGURACIÓN ---
 const TELEGRAM_CHANNEL_SOURCE = 'E_positivo';
+const SECONDARY_CHANNEL_SOURCE = 'httpsbancocompradedivisa';
 const BINANCE_P2P_URL = 'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search';
 
 // Credenciales
@@ -277,57 +278,65 @@ async function checkBDVWeb() {
     }
 }
 
-// ===== FUENTE 3: TELEGRAM @E_positivo (Todos los bancos) =====
+// ===== FUENTE 3: TELEGRAM (Multi-Canal) =====
 async function getTelegramData() {
     try {
-        const res = await axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`, { timeout: 10000 });
-        const $ = cheerio.load(res.data);
-        const messages = $('.tgme_widget_message_text').toArray();
+        // Escanear ambos canales en paralelo
+        const [res1, res2] = await Promise.all([
+            axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`, { timeout: 10000 }),
+            axios.get(`https://t.me/s/${SECONDARY_CHANNEL_SOURCE}`, { timeout: 10000 })
+        ]);
+
+        const $1 = cheerio.load(res1.data);
+        const $2 = cheerio.load(res2.data);
+        
+        const messages1 = $1('.tgme_widget_message_text').toArray().map(m => $1(m).text());
+        const messages2 = $2('.tgme_widget_message_text').toArray().map(m => $2(m).text());
+        
+        const allMessages = [...messages1, ...messages2];
         
         let foundRate = null;
         let banks = { ...monitorState.bankStatuses };
 
-        // 1. Buscamos la Tasa de Intervención (Formato: TASA: 570,75 Bs.)
-        for (let i = messages.length - 1; i >= 0; i--) {
-            const text = $(messages[i]).text();
+        // 1. Tasa de Intervención
+        for (let i = allMessages.length - 1; i >= 0; i--) {
+            const text = allMessages[i];
             if (text.includes('TASA:')) {
                 const matches = text.match(/TASA:\s*(\d{2,3}[\.,]\d{2})/i);
                 if (matches && !foundRate) {
                     const val = parseFloat(matches[1].replace(',', '.'));
-                    if (val > 600 && val < 1500) {
-                        foundRate = val;
-                    }
+                    if (val > 600 && val < 1500) foundRate = val;
                 }
             }
         }
 
-        // 2. Estado de Bancos (Detección por Emojis y Siglas)
-        for (let i = 0; i < messages.length; i++) {
-            const text = $(messages[i]).text().toUpperCase();
-            const isOpen = text.includes('💸✔️') || text.includes('ABRIÓ') || text.includes('INICIÓ') || text.includes('ACTIVA');
-            const isClosed = text.includes('🚫') || text.includes('CERRADO') || text.includes('CERRADA') || text.includes('FINALIZÓ') || text.includes('TERMINÓ');
+        // 2. Estado de Bancos
+        for (const text of allMessages) {
+            const upperText = text.toUpperCase();
+            const isOpen = upperText.includes('💸✔️') || upperText.includes('ABRIÓ') || upperText.includes('INICIÓ') || upperText.includes('ACTIVA') || upperText.includes('🟢');
+            const isClosed = upperText.includes('🚫') || upperText.includes('CERRADO') || upperText.includes('CERRADA') || upperText.includes('FINALIZÓ') || upperText.includes('TERMINÓ') || upperText.includes('🔴');
 
-            if (text.includes('BDV') || text.includes('VENEZUELA')) {
+            if (upperText.includes('BDV') || upperText.includes('VENEZUELA')) {
                 if (isOpen) banks['BDV'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BDV'] = 'CERRADO 🔴';
             }
-            if (text.includes('BT ') || text.includes('TESORO') || text.includes('😇BT')) {
+            if (upperText.includes('BT ') || upperText.includes('TESORO') || upperText.includes('😇BT')) {
                 if (isOpen) banks['TESORO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['TESORO'] = 'CERRADO 🔴';
             }
-            if (text.includes('BDT') || text.includes('TRABAJADORES') || text.includes('BDT')) {
+            if (upperText.includes('BDT') || upperText.includes('TRABAJADORES')) {
                 if (isOpen) banks['BDT'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BDT'] = 'CERRADO 🔴';
             }
-            if (text.includes('ACTIVO')) {
+            if (upperText.includes('ACTIVO')) {
                 if (isOpen) banks['ACTIVO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['ACTIVO'] = 'CERRADO 🔴';
             }
-            if (text.includes('BANCAMIGA')) {
+            if (upperText.includes('BANCAMIGA')) {
                 if (isOpen) banks['BANCAMIGA'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BANCAMIGA'] = 'CERRADO 🔴';
             }
-            if (text.includes('PROVINCIAL') || text.includes('BBVA') || text.includes('☺️BBVA')) {
+            if (upperText.includes('PROVINCIAL') || upperText.includes('BBVA') || upperText.includes('☺️BBVA')) {
                 if (isOpen) banks['PROVINCIAL'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['PROVINCIAL'] = 'CERRADO 🔴';
             }
@@ -337,7 +346,7 @@ async function getTelegramData() {
         return { rate: foundRate, banks };
     } catch (e) {
         monitorState.dataSources.telegram = '❌';
-        addLog(`❌ Error Telegram: ${e.message}`);
+        addLog(`❌ Error Telegram (Multi-Canal): ${e.message}`);
         return { rate: null, banks: null };
     }
 }
