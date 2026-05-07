@@ -320,37 +320,36 @@ async function getTelegramData() {
         // 2. Estado de Bancos
         for (const text of allMessages) {
             const upperText = text.toUpperCase();
-            // Detectar si el bloque de texto indica apertura
             const isOpen = upperText.includes('💸✔️') || upperText.includes('ABRIÓ') || upperText.includes('INICIÓ') || 
-                           upperText.includes('ACTIVA') || upperText.includes('🟢') || upperText.includes('MÍNIMO');
+                           upperText.includes('ACTIVA') || upperText.includes('🟢') || upperText.includes('MÍNIMO') ||
+                           upperText.includes('INTERVENCIÓN') || upperText.includes('INTERVENSION');
             
             const isClosed = upperText.includes('🚫') || upperText.includes('CERRADO') || upperText.includes('CERRADA') || 
                              upperText.includes('FINALIZÓ') || upperText.includes('TERMINÓ') || upperText.includes('🔴');
 
-            // Mapeo preciso con soporte para nuevos emojis y formatos compactos
+            const updateBank = (key) => {
+                // Si ya está ABIERTO en este ciclo, no lo sobrescribimos con CERRADO
+                if (isOpen) banks[key] = 'ABIERTO 🟢';
+                else if (isClosed && banks[key] !== 'ABIERTO 🟢') banks[key] = 'CERRADO 🔴';
+            };
+
             if (upperText.includes('BDV') || upperText.includes('VENEZUELA') || upperText.includes('👍BDV')) {
-                if (isOpen) banks['BDV'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['BDV'] = 'CERRADO 🔴';
+                updateBank('BDV');
             }
             if (upperText.includes('BT ') || upperText.includes('TESORO') || upperText.includes('😇BT') || upperText.includes('🗣BT')) {
-                if (isOpen) banks['TESORO'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['TESORO'] = 'CERRADO 🔴';
+                updateBank('TESORO');
             }
             if (upperText.includes('BDT') || upperText.includes('TRABAJADORES') || upperText.includes('😝BDT') || upperText.includes('🗣BDT')) {
-                if (isOpen) banks['BDT'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['BDT'] = 'CERRADO 🔴';
+                updateBank('BDT');
             }
             if (upperText.includes('ACTIVO') || upperText.includes('🗣ACTIVO')) {
-                if (isOpen) banks['ACTIVO'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['ACTIVO'] = 'CERRADO 🔴';
+                updateBank('ACTIVO');
             }
             if (upperText.includes('BANCAMIGA') || upperText.includes('😜BANCAMIGA')) {
-                if (isOpen) banks['BANCAMIGA'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['BANCAMIGA'] = 'CERRADO 🔴';
+                updateBank('BANCAMIGA');
             }
-            if (upperText.includes('PROVINCIAL') || upperText.includes('BBVA') || upperText.includes('☺️BBVA') || upperText.includes('PROVINCIAL')) {
-                if (isOpen) banks['PROVINCIAL'] = 'ABIERTO 🟢';
-                else if (isClosed) banks['PROVINCIAL'] = 'CERRADO 🔴';
+            if (upperText.includes('PROVINCIAL') || upperText.includes('BBVA') || upperText.includes('☺️BBVA')) {
+                updateBank('PROVINCIAL');
             }
         }
 
