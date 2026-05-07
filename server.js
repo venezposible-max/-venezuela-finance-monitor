@@ -281,24 +281,31 @@ async function checkBDVWeb() {
 // ===== FUENTE 3: TELEGRAM (Multi-Canal) =====
 async function getTelegramData() {
     try {
-        // Escanear ambos canales en paralelo
-        const [res1, res2] = await Promise.all([
-            axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`, { timeout: 10000 }),
-            axios.get(`https://t.me/s/${SECONDARY_CHANNEL_SOURCE}`, { timeout: 10000 })
+        // Escanear ambos canales en paralelo con tolerancia a fallos
+        const results = await Promise.allSettled([
+            axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`, { timeout: 8000 }),
+            axios.get(`https://t.me/s/${SECONDARY_CHANNEL_SOURCE}`, { timeout: 8000 })
         ]);
 
-        const $1 = cheerio.load(res1.data);
-        const $2 = cheerio.load(res2.data);
-        
-        const messages1 = $1('.tgme_widget_message_text').toArray().map(m => $1(m).text());
-        const messages2 = $2('.tgme_widget_message_text').toArray().map(m => $2(m).text());
-        
-        const allMessages = [...messages1, ...messages2];
+        let allMessages = [];
+        results.forEach(res => {
+            if (res.status === 'fulfilled') {
+                const $ = cheerio.load(res.value.data);
+                $('.tgme_widget_message_text').toArray().forEach(m => {
+                    allMessages.push($(m).text());
+                });
+            }
+        });
+
+        if (allMessages.length === 0) {
+            addLog(`⚠️ No se obtuvieron mensajes de Telegram (Fuentes caídas o vacías)`);
+            return { rate: null, banks: null };
+        }
         
         let foundRate = null;
         let banks = { ...monitorState.bankStatuses };
 
-        // 1. Tasa de Intervención
+        // 1. Tasa de Intervención (Buscamos de atrás hacia adelante para la más reciente)
         for (let i = allMessages.length - 1; i >= 0; i--) {
             const text = allMessages[i];
             if (text.includes('TASA:')) {
@@ -313,30 +320,35 @@ async function getTelegramData() {
         // 2. Estado de Bancos
         for (const text of allMessages) {
             const upperText = text.toUpperCase();
-            const isOpen = upperText.includes('💸✔️') || upperText.includes('ABRIÓ') || upperText.includes('INICIÓ') || upperText.includes('ACTIVA') || upperText.includes('🟢');
-            const isClosed = upperText.includes('🚫') || upperText.includes('CERRADO') || upperText.includes('CERRADA') || upperText.includes('FINALIZÓ') || upperText.includes('TERMINÓ') || upperText.includes('🔴');
+            // Detectar si el bloque de texto indica apertura
+            const isOpen = upperText.includes('💸✔️') || upperText.includes('ABRIÓ') || upperText.includes('INICIÓ') || 
+                           upperText.includes('ACTIVA') || upperText.includes('🟢') || upperText.includes('MÍNIMO');
+            
+            const isClosed = upperText.includes('🚫') || upperText.includes('CERRADO') || upperText.includes('CERRADA') || 
+                             upperText.includes('FINALIZÓ') || upperText.includes('TERMINÓ') || upperText.includes('🔴');
 
-            if (upperText.includes('BDV') || upperText.includes('VENEZUELA')) {
+            // Mapeo preciso con soporte para nuevos emojis y formatos compactos
+            if (upperText.includes('BDV') || upperText.includes('VENEZUELA') || upperText.includes('👍BDV')) {
                 if (isOpen) banks['BDV'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BDV'] = 'CERRADO 🔴';
             }
-            if (upperText.includes('BT ') || upperText.includes('TESORO') || upperText.includes('😇BT')) {
+            if (upperText.includes('BT ') || upperText.includes('TESORO') || upperText.includes('😇BT') || upperText.includes('🗣BT')) {
                 if (isOpen) banks['TESORO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['TESORO'] = 'CERRADO 🔴';
             }
-            if (upperText.includes('BDT') || upperText.includes('TRABAJADORES')) {
+            if (upperText.includes('BDT') || upperText.includes('TRABAJADORES') || upperText.includes('😝BDT') || upperText.includes('🗣BDT')) {
                 if (isOpen) banks['BDT'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BDT'] = 'CERRADO 🔴';
             }
-            if (upperText.includes('ACTIVO')) {
+            if (upperText.includes('ACTIVO') || upperText.includes('🗣ACTIVO')) {
                 if (isOpen) banks['ACTIVO'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['ACTIVO'] = 'CERRADO 🔴';
             }
-            if (upperText.includes('BANCAMIGA')) {
+            if (upperText.includes('BANCAMIGA') || upperText.includes('😜BANCAMIGA')) {
                 if (isOpen) banks['BANCAMIGA'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['BANCAMIGA'] = 'CERRADO 🔴';
             }
-            if (upperText.includes('PROVINCIAL') || upperText.includes('BBVA') || upperText.includes('☺️BBVA')) {
+            if (upperText.includes('PROVINCIAL') || upperText.includes('BBVA') || upperText.includes('☺️BBVA') || upperText.includes('PROVINCIAL')) {
                 if (isOpen) banks['PROVINCIAL'] = 'ABIERTO 🟢';
                 else if (isClosed) banks['PROVINCIAL'] = 'CERRADO 🔴';
             }
@@ -346,7 +358,7 @@ async function getTelegramData() {
         return { rate: foundRate, banks };
     } catch (e) {
         monitorState.dataSources.telegram = '❌';
-        addLog(`❌ Error Telegram (Multi-Canal): ${e.message}`);
+        addLog(`❌ Error Crítico en Telegram: ${e.message}`);
         return { rate: null, banks: null };
     }
 }
@@ -539,13 +551,12 @@ app.post('/api/interval', (req, res) => {
     const { minutes } = req.body;
     const mins = parseInt(minutes);
     if (!isNaN(mins)) {
-        monitorIntervalTime = mins * 60 * 1000;
         monitorState.interval = mins;
         addLog(`⏲ Intervalo actualizado a: ${mins} minutos`);
         
         if (monitorState.isRunning) {
             clearInterval(monitorInterval);
-            monitorInterval = setInterval(runMonitor, monitorIntervalTime);
+            monitorInterval = setInterval(runMonitor, 2 * 60 * 1000);
         }
         io.emit('state_update', monitorState);
         res.json({ success: true, interval: mins });
