@@ -130,9 +130,7 @@ El precio del USDT en Binance P2P acaba de subir <b>+${priceJump.toFixed(2)} Bs<
 
 <i>🕒 ${time}</i>`;
                 await sendTelegramAlert(alertMsgPrice);
-                
-                // Forzar un reporte completo inmediatamente
-                runMonitor();
+                // Ya no llamamos a runMonitor() aquí para respetar el ritmo de reporte programado
             }
         }
         
@@ -155,9 +153,7 @@ El inventario de los comerciantes más baratos acaba de desplomarse un <b>${drop
 
 <i>🕒 ${time}</i>`;
                 await sendTelegramAlert(alertMsgLiq);
-                
-                // Forzar un reporte normal inmediatamente
-                runMonitor();
+                // Ya no llamamos a runMonitor() aquí para respetar el ritmo de reporte programado
             }
         }
         
@@ -202,7 +198,7 @@ async function checkBankStatus() {
             const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
             const finalAlert = `🔔 <b>¡ALERTA DE MERCADO BANCARIO!</b> 🔔\n\nSe acaba de detectar un cambio en la disponibilidad de intervención:\n\n${alertMessages.join('\n')}\n\n<i>🕒 ${time}</i>`;
             await sendTelegramAlert(finalAlert);
-            runMonitor();
+            // Ya no llamamos a runMonitor() aquí para respetar el ritmo de reporte programado
         }
 
     } catch (e) {}
