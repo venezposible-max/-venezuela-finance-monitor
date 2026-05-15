@@ -561,7 +561,7 @@ app.post('/api/interval', (req, res) => {
         
         if (monitorState.isRunning) {
             clearInterval(monitorInterval);
-            monitorInterval = setInterval(runMonitor, 2 * 60 * 1000);
+            monitorInterval = setInterval(runMonitor, mins * 60 * 1000);
         }
         io.emit('state_update', monitorState);
         res.json({ success: true, interval: mins });
