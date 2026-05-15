@@ -18,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 // --- CONFIGURACIÓN ---
 const TELEGRAM_CHANNEL_SOURCE = 'E_positivo';
 const SECONDARY_CHANNEL_SOURCE = 'httpsbancocompradedivisa';
+const THIRD_CHANNEL_SOURCE = 'BancaVenezolana';
 const BINANCE_P2P_URL = 'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search';
 
 // Credenciales
@@ -281,10 +282,11 @@ async function checkBDVWeb() {
 // ===== FUENTE 3: TELEGRAM (Multi-Canal) =====
 async function getTelegramData() {
     try {
-        // Escanear ambos canales en paralelo con tolerancia a fallos
+        // Escanear los tres canales en paralelo para máxima velocidad
         const results = await Promise.allSettled([
             axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`, { timeout: 8000 }),
-            axios.get(`https://t.me/s/${SECONDARY_CHANNEL_SOURCE}`, { timeout: 8000 })
+            axios.get(`https://t.me/s/${SECONDARY_CHANNEL_SOURCE}`, { timeout: 8000 }),
+            axios.get(`https://t.me/s/${THIRD_CHANNEL_SOURCE}`, { timeout: 8000 })
         ]);
 
         let allMessages = [];
@@ -320,26 +322,30 @@ async function getTelegramData() {
         // 2. Estado de Bancos
         for (const text of allMessages) {
             const upperText = text.toUpperCase();
-            const isOpen = upperText.includes('💸✔️') || upperText.includes('ABRIÓ') || upperText.includes('INICIÓ') || 
-                           upperText.includes('ACTIVA') || upperText.includes('🟢') || upperText.includes('MÍNIMO') ||
-                           upperText.includes('INTERVENCIÓN') || upperText.includes('INTERVENSION');
             
+            // Detección de Apertura (más precisa)
+            const isOpen = upperText.includes('💸✔️') || upperText.includes('ABRIÓ') || upperText.includes('INICIÓ') || 
+                           upperText.includes('ACTIVA') || upperText.includes('ACTIVO') || upperText.includes('🟢') || 
+                           upperText.includes('MÍNIMO') || upperText.includes('TASA:');
+            
+            // Detección de Cierre
             const isClosed = upperText.includes('🚫') || upperText.includes('CERRADO') || upperText.includes('CERRADA') || 
                              upperText.includes('FINALIZÓ') || upperText.includes('TERMINÓ') || upperText.includes('🔴');
 
             const updateBank = (key) => {
-                // Si ya está ABIERTO en este ciclo, no lo sobrescribimos con CERRADO
+                // Prioridad absoluta a la apertura si se detecta en el mismo ciclo
                 if (isOpen) banks[key] = 'ABIERTO 🟢';
                 else if (isClosed && banks[key] !== 'ABIERTO 🟢') banks[key] = 'CERRADO 🔴';
             };
 
+            // Mapeo preciso de palabras clave por banco
             if (upperText.includes('BDV') || upperText.includes('VENEZUELA') || upperText.includes('👍BDV')) {
                 updateBank('BDV');
             }
-            if (upperText.includes('BT ') || upperText.includes('TESORO') || upperText.includes('😇BT') || upperText.includes('🗣BT')) {
+            if (upperText.includes('BT ') || upperText.includes('TESORO') || upperText.includes('😇BT') || upperText.includes('🗣BT') || upperText.includes('BANCO DEL TESORO')) {
                 updateBank('TESORO');
             }
-            if (upperText.includes('BDT') || upperText.includes('TRABAJADORES') || upperText.includes('😝BDT') || upperText.includes('🗣BDT')) {
+            if (upperText.includes('BDT') || upperText.includes('TRABAJADORES') || upperText.includes('😝BDT') || upperText.includes('🗣BDT') || upperText.includes('BANCO DIGITAL')) {
                 updateBank('BDT');
             }
             if (upperText.includes('ACTIVO') || upperText.includes('🗣ACTIVO')) {
