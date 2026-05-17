@@ -1,10 +1,14 @@
 const express = require('express');
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const path = require('path');
+const { TelegramClient } = require('telegram');
+const { StringSession } = require('telegram/sessions');
+const { NewMessage } = require('telegram/events');
 
 // Agent para BCV (SSL sin verificación estricta)
 const insecureAgent = new https.Agent({ rejectUnauthorized: false });
@@ -23,7 +27,22 @@ const BINANCE_P2P_URL = 'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/se
 
 // Credenciales
 const BOT_TOKEN = process.env.BOT_TOKEN || '8692351460:AAGuTRGkLEG6pt-nq5fMM5jqS-pXQflwfUM'; 
-const CHAT_ID = process.env.CHAT_ID || '-1003812445382';    
+const CHAT_ID = process.env.CHAT_ID || '-1003812445382';
+
+// --- USERBOT (gramjs) para canal con vista pública desactivada ---
+const USERBOT_API_ID = 34693713;
+const USERBOT_API_HASH = 'ac85826864b1ee35fed41cd4966631f5';
+let userBotSession = process.env.USERBOT_SESSION || '';
+if (!userBotSession) {
+    try {
+        userBotSession = fs.readFileSync('session.txt', 'utf8').trim();
+        console.log('[USERBOT] Sesión cargada desde archivo.');
+    } catch (e) {
+        console.log('[USERBOT] No se encontró session.txt ni USERBOT_SESSION. Espejo desactivado.');
+    }
+} else {
+    console.log('[USERBOT] Sesión cargada desde variable de entorno.');
+}    
 
 let monitorState = {
     isRunning: false,
@@ -583,6 +602,61 @@ app.post('/api/stop', (req, res) => {
     res.json({ success: true, state: monitorState });
 });
 
+// ===== USERBOT: ESPEJO EN TIEMPO REAL =====
+async function startUserBot() {
+    if (!userBotSession) {
+        console.log('[USERBOT] Sin sesión. Espejo desactivado.');
+        addLog('⚠️ UserBot sin sesión. Canal BANCO$$$ no será monitoreado en tiempo real.');
+        return;
+    }
+
+    try {
+        const client = new TelegramClient(
+            new StringSession(userBotSession),
+            USERBOT_API_ID,
+            USERBOT_API_HASH,
+            { connectionRetries: 5 }
+        );
+
+        await client.connect();
+        console.log('[USERBOT] ✅ Conectado y escuchando canal BANCO $$$...');
+        addLog('🔗 UserBot CONECTADO: Escuchando canal BANCO $$$ en tiempo real');
+
+        client.addEventHandler(async (event) => {
+            try {
+                const message = event.message;
+                if (!message || !message.peerId || !message.message) return;
+
+                const channel = await client.getEntity(message.peerId);
+                const username = (channel.username || '').toLowerCase();
+
+                // Verificar si el mensaje viene del canal objetivo
+                if (username === 'httpsbancocompradedivisa' || username === 'bancocompradedivisa') {
+                    const text = message.message;
+                    console.log(`[ESPEJO] Mensaje capturado del canal BANCO $$$: ${text.substring(0, 80)}...`);
+                    addLog(`📢 ESPEJO: Mensaje capturado de BANCO $$$ (${text.length} chars)`);
+
+                    // Replicar exactamente al canal destino
+                    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                        chat_id: CHAT_ID,
+                        text: `📢 *BANCO \$ \$ \$* 📢\n\n${text}`,
+                        parse_mode: 'Markdown'
+                    });
+
+                    addLog('✅ Mensaje replicado exitosamente al canal destino');
+                }
+            } catch (err) {
+                console.error('[ESPEJO] Error procesando mensaje:', err.message);
+                addLog(`❌ Error espejo: ${err.message}`);
+            }
+        }, new NewMessage({}));
+
+    } catch (e) {
+        console.error('[USERBOT] Error de conexión:', e.message);
+        addLog(`❌ UserBot error: ${e.message}`);
+    }
+}
+
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     
@@ -594,4 +668,7 @@ server.listen(PORT, () => {
     }, 60000);
     checkLiquidity(); // Ejecución inicial
     checkBankStatus(); // Ejecución inicial
+
+    // Iniciar UserBot para espejo en tiempo real
+    startUserBot();
 });
