@@ -603,6 +603,50 @@ app.post('/api/stop', (req, res) => {
 });
 
 // ===== USERBOT: ESPEJO EN TIEMPO REAL =====
+let userBotClient = null;
+
+async function fetchLastMessage() {
+    if (!userBotClient) {
+        addLog('⚠️ UserBot no conectado. No se puede buscar último mensaje.');
+        return { success: false, error: 'UserBot no conectado' };
+    }
+
+    try {
+        const channel = await userBotClient.getEntity('httpsbancocompradedivisa');
+        const messages = await userBotClient.getMessages(channel, { limit: 5 });
+        
+        if (messages.length === 0) {
+            addLog('⚠️ No hay mensajes recientes en el canal BANCO $$$');
+            return { success: false, error: 'Sin mensajes' };
+        }
+
+        // Buscar el primer mensaje con texto
+        const lastMsg = messages.find(m => m.message && m.message.trim().length > 0);
+        if (!lastMsg) {
+            addLog('⚠️ No se encontró mensaje con texto en BANCO $$$');
+            return { success: false, error: 'Sin mensajes de texto' };
+        }
+
+        const text = lastMsg.message;
+        console.log(`[ESPEJO] Último mensaje de BANCO $$$: ${text.substring(0, 80)}...`);
+        addLog(`📢 ESPEJO: Último mensaje obtenido de BANCO $$$ (${text.length} chars)`);
+
+        // Replicar al canal destino
+        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            chat_id: CHAT_ID,
+            text: `📢 *BANCO \$ \$ \$* 📢\n\n${text}`,
+            parse_mode: 'Markdown'
+        });
+
+        addLog('✅ Último mensaje replicado exitosamente');
+        return { success: true, text: text.substring(0, 100) + '...' };
+    } catch (e) {
+        console.error('[ESPEJO] Error buscando último mensaje:', e.message);
+        addLog(`❌ Error buscando último mensaje: ${e.message}`);
+        return { success: false, error: e.message };
+    }
+}
+
 async function startUserBot() {
     if (!userBotSession) {
         console.log('[USERBOT] Sin sesión. Espejo desactivado.');
@@ -619,8 +663,12 @@ async function startUserBot() {
         );
 
         await client.connect();
+        userBotClient = client;
         console.log('[USERBOT] ✅ Conectado y escuchando canal BANCO $$$...');
         addLog('🔗 UserBot CONECTADO: Escuchando canal BANCO $$$ en tiempo real');
+
+        // Buscar y reenviar el último mensaje al arrancar
+        await fetchLastMessage();
 
         client.addEventHandler(async (event) => {
             try {
@@ -656,6 +704,12 @@ async function startUserBot() {
         addLog(`❌ UserBot error: ${e.message}`);
     }
 }
+
+// Endpoint manual para reenviar último mensaje
+app.post('/api/mirror/last', async (req, res) => {
+    const result = await fetchLastMessage();
+    res.json(result);
+});
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
