@@ -710,6 +710,15 @@ app.post('/api/mirror/last', async (req, res) => {
     res.json(result);
 });
 
+app.get('/api/debug/userbot', (req, res) => {
+    res.json({
+        hasSession: !!userBotSession,
+        sessionLength: userBotSession ? userBotSession.length : 0,
+        isClientInitialized: !!userBotClient,
+        clientConnected: userBotClient ? userBotClient.connected : false
+    });
+});
+
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     
