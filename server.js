@@ -297,10 +297,9 @@ async function checkBDVWeb() {
 // ===== FUENTE 3: TELEGRAM (Multi-Canal) =====
 async function getTelegramData() {
     try {
-        // Escanear los tres canales en paralelo para máxima velocidad
+        // Escanear canales con vista pública (BANCO$$$ se maneja por UserBot aparte)
         const results = await Promise.allSettled([
             axios.get(`https://t.me/s/${TELEGRAM_CHANNEL_SOURCE}`, { timeout: 8000 }),
-            axios.get(`https://t.me/s/${SECONDARY_CHANNEL_SOURCE}`, { timeout: 8000 }),
             axios.get(`https://t.me/s/${THIRD_CHANNEL_SOURCE}`, { timeout: 8000 })
         ]);
 
