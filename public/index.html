@@ -133,10 +133,24 @@
         </div>
 
         <div class="grid">
-            <div class="card">
-                <h3>BCV Intervención</h3>
+            <div class="card" id="bcv-card" style="transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin-bottom: 0;">BCV Intervención</h3>
+                    <div style="display: flex; gap: 6px;">
+                        <button id="btn-bcv-auto" class="chip" onclick="setBcvAuto()" style="display: none; padding: 4px 10px; font-size: 11px; background: var(--green); border-radius: 8px; border: none; height: auto; font-weight: 700;">AUTO 🤖</button>
+                        <button id="btn-bcv-edit" class="chip" onclick="toggleBcvEdit()" style="padding: 4px 10px; font-size: 11px; background: rgba(255,255,255,0.05); border-radius: 8px; border: none; height: auto; font-weight: 700;">✏️ EDITAR</button>
+                    </div>
+                </div>
                 <div id="bcv-val" class="value">---</div>
                 <div class="sub">Tasa oficial de inyección</div>
+                
+                <!-- Slide-down manual edit container -->
+                <div id="bcv-edit-box" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="number" id="input-bcv-rate" step="0.01" style="flex: 1; padding: 8px 12px; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px; font-weight: 600;" placeholder="Ej. 611.00">
+                        <button onclick="saveBcvRate()" style="padding: 8px 14px; border-radius: 10px; background: var(--accent); border: none; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s;">Fijar</button>
+                    </div>
+                </div>
             </div>
             <div class="card">
                 <h3>Binance P2P</h3>
@@ -296,6 +310,19 @@
             document.getElementById('binance-val').innerText = (state.binanceRate || 0).toFixed(2) + ' Bs';
             document.getElementById('spread-val').innerText = (state.spread || 0).toFixed(2) + '%';
             document.getElementById('last-update').innerText = 'Actualizado: ' + (state.lastUpdate || '---');
+
+            // Update BCV card manual state
+            const bcvCard = document.getElementById('bcv-card');
+            const bcvAutoBtn = document.getElementById('btn-bcv-auto');
+            if (state.isBcvManual) {
+                bcvCard.style.borderColor = 'var(--accent)';
+                bcvCard.style.background = 'rgba(88, 101, 242, 0.05)';
+                bcvAutoBtn.style.display = 'inline-block';
+            } else {
+                bcvCard.style.borderColor = 'rgba(255,255,255,0.05)';
+                bcvCard.style.background = 'var(--card)';
+                bcvAutoBtn.style.display = 'none';
+            }
 
             const banks = ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA', 'PROVINCIAL'];
             banks.forEach(id => {
@@ -459,6 +486,46 @@
             latestState = state;
             _origUpdateUI(state);
         };
+
+        function toggleBcvEdit() {
+            const box = document.getElementById('bcv-edit-box');
+            if (box.style.display === 'none') {
+                box.style.display = 'block';
+                document.getElementById('input-bcv-rate').value = latestState.bcvRate || '';
+                document.getElementById('input-bcv-rate').focus();
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
+        async function saveBcvRate() {
+            const rate = parseFloat(document.getElementById('input-bcv-rate').value);
+            if (isNaN(rate) || rate <= 0) return alert('Por favor, ingresa una tasa válida');
+            
+            const res = await fetch('/api/bcv/rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rate })
+            });
+            
+            if (res.ok) {
+                document.getElementById('bcv-edit-box').style.display = 'none';
+            } else {
+                alert('Error al guardar la tasa');
+            }
+        }
+
+        async function setBcvAuto() {
+            const res = await fetch('/api/bcv/rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isManual: false })
+            });
+            
+            if (!res.ok) {
+                alert('Error al activar el modo automático');
+            }
+        }
     </script>
 </body>
 </html>

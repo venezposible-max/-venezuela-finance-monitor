@@ -48,6 +48,7 @@ let monitorState = {
     isRunning: false,
     lastUpdate: null,
     bcvRate: 611,
+    isBcvManual: true,
     binanceRate: 639.00,
     spread: 0,
     bankStatuses: { 
@@ -395,18 +396,19 @@ async function getMultiSourceData() {
     let rate = monitorState.bcvRate;
 
     // --- TASA: Prioridad Telegram (Intervención) ---
-    /*
-    if (telegram.rate) {
-        rate = telegram.rate;
-        addLog(`💎 Tasa de Intervención (vía Telegram): ${telegram.rate} Bs.`);
+    if (!monitorState.isBcvManual) {
+        if (telegram.rate) {
+            rate = telegram.rate;
+            addLog(`💎 Tasa de Intervención (vía Telegram): ${telegram.rate} Bs.`);
+        } else if (bcvRate) {
+            rate = bcvRate;
+            addLog(`🏛 Tasa de Intervención (vía BCV Directo): ${bcvRate} Bs.`);
+        } else {
+            addLog(`🏛 Manteniendo Tasa de Intervención guardada: ${rate} Bs.`);
+        }
     } else {
-        addLog(`🏛 Manteniendo Tasa de Intervención guardada: ${rate} Bs.`);
+        addLog(`🏛 Tasa de Intervención fijada manualmente en: ${rate} Bs.`);
     }
-    */
-    
-    // Forzado a 611 por petición del usuario
-    rate = 611;
-    addLog(`🏛 Tasa de Intervención fijada manualmente en: ${rate} Bs.`);
 
     // --- BANCOS: Mezclar fuentes (web directo tiene prioridad) ---
     // Primero aplicar Telegram como base
@@ -566,6 +568,41 @@ app.post('/api/bank/auto', (req, res) => {
     addLog(`🤖 MODO AUTO: ${bankId} ahora sigue al bot`);
     runMonitor(); // Actualizamos inmediatamente
     res.json({ success: true });
+});
+
+app.post('/api/bcv/rate', (req, res) => {
+    const { rate, isManual } = req.body;
+    
+    if (rate !== undefined) {
+        const val = parseFloat(rate);
+        if (!isNaN(val) && val > 0) {
+            monitorState.bcvRate = val;
+            monitorState.isBcvManual = true;
+            addLog(`🛠 MODO MANUAL BCV: Tasa fijada en ${val.toFixed(2)} Bs`);
+        } else {
+            return res.status(400).json({ error: 'Tasa inválida' });
+        }
+    }
+    
+    if (isManual !== undefined) {
+        monitorState.isBcvManual = !!isManual;
+        if (!monitorState.isBcvManual) {
+            addLog(`🤖 MODO AUTO BCV: La tasa de intervención seguirá a las fuentes automáticas`);
+        }
+    }
+    
+    // Recalcular spread
+    if (monitorState.binanceRate > 0 && monitorState.bcvRate > 0) {
+        monitorState.spread = ((monitorState.binanceRate - monitorState.bcvRate) / monitorState.bcvRate) * 100;
+    }
+    
+    // Emitir a sockets
+    io.emit('state_update', monitorState);
+    
+    // Ejecutar actualización
+    runMonitor();
+    
+    res.json({ success: true, state: monitorState });
 });
 
 io.on('connection', (socket) => {
