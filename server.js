@@ -395,12 +395,18 @@ async function getMultiSourceData() {
     let rate = monitorState.bcvRate;
 
     // --- TASA: Prioridad Telegram (Intervención) ---
+    /*
     if (telegram.rate) {
         rate = telegram.rate;
         addLog(`💎 Tasa de Intervención (vía Telegram): ${telegram.rate} Bs.`);
     } else {
         addLog(`🏛 Manteniendo Tasa de Intervención guardada: ${rate} Bs.`);
     }
+    */
+    
+    // Forzado a 611 por petición del usuario
+    rate = 611;
+    addLog(`🏛 Tasa de Intervención fijada manualmente en: ${rate} Bs.`);
 
     // --- BANCOS: Mezclar fuentes (web directo tiene prioridad) ---
     // Primero aplicar Telegram como base
