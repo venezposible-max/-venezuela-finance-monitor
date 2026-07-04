@@ -51,6 +51,7 @@ let monitorState = {
     isBcvManual: true,
     binanceRate: 639.00,
     spread: 0,
+    bpayCommission: 4.1,
     bankStatuses: { 
         'BDV': 'CERRADO 🔴', 
         'TESORO': 'CERRADO 🔴',
@@ -522,7 +523,7 @@ async function runMonitor() {
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
 
 🧮 <b>ARBITRAJE — Base 100 USDT</b>
-${calcReport(effectiveBcv, binance, 'BDT', 1.5, 4.1, 1.5)}
+${calcReport(effectiveBcv, binance, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5)}
 ${calcReport(effectiveBcv, binance, 'BDV (Digital)', 2.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'BDV (Física)', 1.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6)}
@@ -619,6 +620,20 @@ app.post('/api/bcv/rate', (req, res) => {
     runMonitor();
     
     res.json({ success: true, state: monitorState });
+});
+
+app.post('/api/bpay/commission', (req, res) => {
+    const { commission } = req.body;
+    const val = parseFloat(commission);
+    if (!isNaN(val) && val >= 0) {
+        monitorState.bpayCommission = val;
+        addLog(`🛠 COMISIÓN BPAY: Tasa fijada en ${val.toFixed(2)}%`);
+        io.emit('state_update', monitorState);
+        runMonitor();
+        res.json({ success: true, state: monitorState });
+    } else {
+        res.status(400).json({ error: 'Comisión inválida' });
+    }
 });
 
 io.on('connection', (socket) => {

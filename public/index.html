@@ -152,6 +152,22 @@
                     </div>
                 </div>
             </div>
+            <div class="card" id="bpay-card" style="transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin-bottom: 0;">Comisión BPay/GPay</h3>
+                    <button id="btn-bpay-edit" class="chip" onclick="toggleBpayEdit()" style="padding: 4px 10px; font-size: 11px; background: rgba(255,255,255,0.05); border-radius: 8px; border: none; height: auto; font-weight: 700;">✏️ EDITAR</button>
+                </div>
+                <div id="bpay-val" class="value">---</div>
+                <div class="sub">Comisión pasarela (Monitor)</div>
+                
+                <!-- Slide-down manual edit container -->
+                <div id="bpay-edit-box" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="number" id="input-bpay-rate" step="0.1" style="flex: 1; padding: 8px 12px; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px; font-weight: 600;" placeholder="Ej. 4.1">
+                        <button onclick="saveBpayRate()" style="padding: 8px 14px; border-radius: 10px; background: var(--accent); border: none; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s;">Fijar</button>
+                    </div>
+                </div>
+            </div>
             <div class="card">
                 <h3>Binance P2P</h3>
                 <div id="binance-val" class="value">---</div>
@@ -231,6 +247,14 @@
                         <span class="slider"></span>
                     </label>
                 </div>
+            </div>
+        </div>
+
+        <!-- Visualización de Arbitraje en Vivo -->
+        <div class="banks" id="live-arbitrage-box" style="margin-bottom: 30px;">
+            <h3>📊 Arbitraje en Vivo (Base 100 USDT)</h3>
+            <div id="live-arbitrage-list">
+                <!-- Se llenará dinámicamente -->
             </div>
         </div>
 
@@ -389,6 +413,85 @@
                 btnToggle.innerText = 'INICIAR MONITOR';
                 btnToggle.className = 'btn-start';
             }
+            
+            // Update BPay card state
+            document.getElementById('bpay-val').innerText = (state.bpayCommission || 4.1).toFixed(2) + '%';
+            
+            // Render Live Arbitrage
+            renderLiveArbitrage(state);
+        }
+
+        function toggleBpayEdit() {
+            const box = document.getElementById('bpay-edit-box');
+            if (box.style.display === 'none') {
+                box.style.display = 'block';
+                document.getElementById('input-bpay-rate').value = latestState.bpayCommission || '4.1';
+                document.getElementById('input-bpay-rate').focus();
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
+        async function saveBpayRate() {
+            const commission = parseFloat(document.getElementById('input-bpay-rate').value);
+            if (isNaN(commission) || commission < 0) return alert('Por favor, ingresa una comisión válida');
+            
+            const res = await fetch('/api/bpay/commission', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commission })
+            });
+            
+            if (res.ok) {
+                document.getElementById('bpay-edit-box').style.display = 'none';
+            } else {
+                alert('Error al guardar la comisión');
+            }
+        }
+
+        function renderLiveArbitrage(state) {
+            const bcv = state.bcvRate || 0;
+            const bin = state.binanceRate || 0;
+            const bpay = state.bpayCommission || 4.1;
+            
+            if (bcv === 0 || bin === 0) return;
+            
+            const banksList = [
+                { name: '🏢 Banco BDT', comReload: 1.5, comPay: 1.5, comBpay: bpay },
+                { name: '🇻🇪 BDV (Digital)', comReload: 2.5, comPay: 0, comBpay: 3.6 },
+                { name: '🇻🇪 BDV (Física)', comReload: 1.5, comPay: 0, comBpay: 3.6 },
+                { name: '💰 Banco del Tesoro', comReload: 2.5, comPay: 0, comBpay: 3.6 },
+                { name: '🏦 Banco Activo', comReload: 1.5, comPay: 0, comBpay: 3.6 },
+                { name: '💎 Bancamiga', comReload: 5.0, comPay: 0, comBpay: 3.6 },
+                { name: '💙 Banco Provincial', comReload: 0.0, comPay: 0, comBpay: 3.6 }
+            ];
+            
+            const container = document.getElementById('live-arbitrage-list');
+            container.innerHTML = '';
+            
+            banksList.forEach(bank => {
+                const usdt = 100;
+                const bolivares = usdt * bin;
+                const usdBruto = bolivares / (bcv * 1.005);
+                const usdTarj = usdBruto * (1 - bank.comReload / 100);
+                const usdNet = usdTarj * (1 - bank.comPay / 100);
+                const usdtFinal = usdNet * (1 - bank.comBpay / 100);
+                const ganancia = usdtFinal - usdt;
+                const pct = (ganancia / usdt * 100).toFixed(2);
+                
+                const color = ganancia >= 0 ? 'var(--green)' : 'var(--red)';
+                const sign = ganancia >= 0 ? '+' : '';
+                
+                const row = document.createElement('div');
+                row.className = 'bank-row';
+                row.innerHTML = `
+                    <span style="font-weight: 600;">${bank.name}</span>
+                    <span style="color: ${color}; font-weight: 700; font-size: 15px;">
+                        ${usdtFinal.toFixed(2)} USDT (${sign}${pct}%)
+                    </span>
+                `;
+                container.appendChild(row);
+            });
         }
 
         socket.on('state_update', (state) => {
