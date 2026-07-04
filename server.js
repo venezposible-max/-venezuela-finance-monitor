@@ -446,7 +446,10 @@ async function sendTelegramAlert(message) {
         await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' });
         addLog('✅ Notificación enviada a Telegram');
     } catch (e) {
-        addLog(`❌ Error Telegram API: ${e.message}`);
+        const errorDesc = e.response && e.response.data && e.response.data.description 
+            ? e.response.data.description 
+            : e.message;
+        addLog(`❌ Error Telegram API: ${errorDesc}`);
     }
 }
 
