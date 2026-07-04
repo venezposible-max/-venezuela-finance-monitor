@@ -237,15 +237,34 @@
         <!-- Calculadora de Arbitraje -->
         <div class="calc-box">
             <h3>🧮 Calculadora de Arbitraje</h3>
-            <div class="calc-inputs">
-                <select id="calc-bank">
-                    <option value="BDV">🇻🇪 BDV (2.5%)</option>
+            <div class="calc-inputs" style="margin-bottom: 12px;">
+                <select id="calc-bank" onchange="onBankSelect()" style="width: 100%;">
+                    <option value="BDT">🏢 BDT (Recarga: 1.5% | Pago: 1.5% | BPay: 4.1%)</option>
+                    <option value="BDV_DIGITAL">🇻🇪 BDV (Digital 2.5%)</option>
+                    <option value="BDV_FISICA">🇻🇪 BDV (Física 1.5%)</option>
                     <option value="TESORO">💰 Tesoro (2.5%)</option>
                     <option value="ACTIVO">🏦 Activo (1.5%)</option>
                     <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
                     <option value="PROVINCIAL">💙 Provincial (0%)</option>
                 </select>
-                <input type="number" id="calc-usdt" placeholder="Cantidad USDT" value="100">
+            </div>
+            <div class="calc-inputs" style="gap: 8px; margin-bottom: 20px;">
+                <div style="flex: 1.2; min-width: 110px;">
+                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Cantidad USDT</label>
+                    <input type="number" id="calc-usdt" placeholder="Cantidad USDT" value="100" style="width: 100%;">
+                </div>
+                <div style="flex: 1; min-width: 90px;">
+                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">% Recarga</label>
+                    <input type="number" id="calc-com-reload" step="0.1" value="1.5" style="width: 100%;">
+                </div>
+                <div style="flex: 1; min-width: 90px;">
+                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">% Pago</label>
+                    <input type="number" id="calc-com-pay" step="0.1" value="1.5" style="width: 100%;">
+                </div>
+                <div style="flex: 1; min-width: 90px;">
+                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">% BPay/GPay</label>
+                    <input type="number" id="calc-com-bpay" step="0.1" value="4.1" style="width: 100%;">
+                </div>
             </div>
             <button class="calc-btn" onclick="calcArbitrage()">CALCULAR GANANCIA</button>
             <div id="calc-results" class="calc-results">
@@ -255,12 +274,14 @@
 
                 <div class="calc-row"><span class="label">1️⃣ Vendes USDT en Binance P2P</span><span id="cr-step1" class="val">---</span></div>
                 <div class="calc-row"><span class="label">2️⃣ Compras USD por Intervención</span><span id="cr-step2" class="val">---</span></div>
-                <div class="calc-row"><span class="label">📉 Comisión Bancaria</span><span id="cr-com-bank" class="val" style="color:var(--red)">---</span></div>
-                <div class="calc-row"><span class="label">💵 USD después de comisión</span><span id="cr-step3" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-row"><span class="label">📉 Comisión Recarga Tarjeta</span><span id="cr-com-reload" class="val" style="color:var(--red)">---</span></div>
+                <div class="calc-row"><span class="label">💳 USD en Tarjeta</span><span id="cr-usd-card" class="val" style="color:var(--green)">---</span></div>
+                <div class="calc-row"><span class="label">📉 Comisión Pago Tarjeta (Pase)</span><span id="cr-com-pay" class="val" style="color:var(--red)">---</span></div>
+                <div class="calc-row"><span class="label">💵 USD Neto para Pasarela</span><span id="cr-step3" class="val" style="color:var(--green)">---</span></div>
                 <div class="calc-divider"></div>
 
-                <div class="calc-row"><span class="label">3️⃣ Envías por Binance Pay</span><span id="cr-step4" class="val">---</span></div>
-                <div class="calc-row"><span class="label">📉 Comisión Binance: Gpay/Bpay</span><span id="cr-com-bin" class="val" style="color:var(--red)">---</span></div>
+                <div class="calc-row"><span class="label">3️⃣ Envías por BPay / GPay</span><span id="cr-step4" class="val">---</span></div>
+                <div class="calc-row"><span class="label">📉 Comisión BPay / GPay</span><span id="cr-com-bin" class="val" style="color:var(--red)">---</span></div>
                 <div class="calc-row"><span class="label">💰 USDT Final después de todo</span><span id="cr-final" class="val" style="color:var(--green)">---</span></div>
                 <div class="calc-divider"></div>
 
@@ -412,21 +433,35 @@
         // Guardamos el estado global para la calculadora
         let latestState = { bcvRate: 0, binanceRate: 0 };
 
-        // Comisiones por banco
-        const COMISIONES = {
-            BDV: { bancaria: 2.5, binance: 3.6 },
-            TESORO: { bancaria: 2.5, binance: 3.6 },
-            ACTIVO: { bancaria: 1.5, binance: 3.6 },
-            BANCAMIGA: { bancaria: 5, binance: 3.6 },
-            PROVINCIAL: { bancaria: 0, binance: 3.6 }
+        // Comisiones por defecto por banco
+        const DEFAULT_COMISIONES = {
+            BDT: { recarga: 1.5, pago: 1.5, bpay: 4.1 },
+            BDV_DIGITAL: { recarga: 2.5, pago: 0.0, bpay: 3.6 },
+            BDV_FISICA: { recarga: 1.5, pago: 0.0, bpay: 3.6 },
+            TESORO: { recarga: 2.5, pago: 0.0, bpay: 3.6 },
+            ACTIVO: { recarga: 1.5, pago: 0.0, bpay: 3.6 },
+            BANCAMIGA: { recarga: 5.0, pago: 0.0, bpay: 3.6 },
+            PROVINCIAL: { recarga: 0.0, pago: 0.0, bpay: 3.6 }
         };
 
-        function calcArbitrage() {
+        function onBankSelect() {
             const bank = document.getElementById('calc-bank').value;
+            const com = DEFAULT_COMISIONES[bank];
+            if (com) {
+                document.getElementById('calc-com-reload').value = com.recarga;
+                document.getElementById('calc-com-pay').value = com.pago;
+                document.getElementById('calc-com-bpay').value = com.bpay;
+            }
+        }
+
+        function calcArbitrage() {
             const usdt = parseFloat(document.getElementById('calc-usdt').value) || 0;
             const bcv = latestState.bcvRate || 0;
             const bin = latestState.binanceRate || 0;
-            const com = COMISIONES[bank];
+
+            const comReload = parseFloat(document.getElementById('calc-com-reload').value) || 0;
+            const comPay = parseFloat(document.getElementById('calc-com-pay').value) || 0;
+            const comBpay = parseFloat(document.getElementById('calc-com-bpay').value) || 0;
 
             if (bcv === 0 || bin === 0) {
                 alert('⚠️ Inicia el monitor primero para obtener las tasas en vivo');
@@ -436,15 +471,19 @@
             // PASO 1: Vendes USDT en Binance P2P → Recibes Bolívares
             const bolivares = usdt * bin;
 
-            // PASO 2: Compras USD por intervención con esos bolívares
-            const usdBruto = bolivares / bcv;
+            // PASO 2: Compras USD por intervención con esos bolívares (usando tasa bcv efectiva con 0.5% com)
+            const usdBruto = bolivares / (bcv * 1.005);
 
-            // PASO 3: Se descuenta la comisión bancaria
-            const comBancaria = usdBruto * (com.bancaria / 100);
-            const usdNeto = usdBruto - comBancaria;
+            // PASO 3: Se descuenta la comisión de recarga de tarjeta
+            const comRecargaVal = usdBruto * (comReload / 100);
+            const usdTarj = usdBruto - comRecargaVal;
 
-            // PASO 4: Envías esos USD por Binance Pay → Se descuenta comisión
-            const comBinance = usdNeto * (com.binance / 100);
+            // PASO 4: Se descuenta la comisión por pasar la tarjeta (si aplica)
+            const comPagoVal = usdTarj * (comPay / 100);
+            const usdNeto = usdTarj - comPagoVal;
+
+            // PASO 5: Envías esos USD por Bpay/Gpay → Se descuenta comisión pasarela
+            const comBinance = usdNeto * (comBpay / 100);
             const usdtFinal = usdNeto - comBinance;
 
             // RESULTADO
@@ -459,10 +498,12 @@
             document.getElementById('cr-bcv').innerText = fmt(bcv) + ' Bs/$';
             document.getElementById('cr-step1').innerText = fmt(bolivares) + ' Bs';
             document.getElementById('cr-step2').innerText = fmt(usdBruto) + ' USD';
-            document.getElementById('cr-com-bank').innerText = '-' + fmt(comBancaria) + ' USD (' + com.bancaria + '%)';
+            document.getElementById('cr-com-reload').innerText = '-' + fmt(comRecargaVal) + ' USD (' + comReload + '%)';
+            document.getElementById('cr-usd-card').innerText = fmt(usdTarj) + ' USD';
+            document.getElementById('cr-com-pay').innerText = '-' + fmt(comPagoVal) + ' USD (' + comPay + '%)';
             document.getElementById('cr-step3').innerText = fmt(usdNeto) + ' USD';
             document.getElementById('cr-step4').innerText = fmt(usdNeto) + ' USDT';
-            document.getElementById('cr-com-bin').innerText = '-' + fmt(comBinance) + ' USDT (' + com.binance + '%)';
+            document.getElementById('cr-com-bin').innerText = '-' + fmt(comBinance) + ' USDT (' + comBpay + '%)';
             document.getElementById('cr-final').innerText = fmt(usdtFinal) + ' USDT';
 
             const profitEl = document.getElementById('cr-profit');

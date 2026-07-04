@@ -462,18 +462,30 @@ async function runMonitor() {
         getMultiSourceData()
     ]);
 
-    function calcReport(bcv, bin, bankName, comBank, comBin) {
+    function calcReport(bcv, bin, bankName, comBankReload, comBin, comBankPay = 0) {
         const usdt = 100;
         const bs = usdt * bin;
         const usdBruto = bs / bcv;
-        const descBank = usdBruto * (comBank / 100);
-        const usdNeto = usdBruto - descBank;
-        const descBin = usdNeto * (comBin / 100);
-        const usdtFinal = usdNeto - descBin;
+        
+        // 1. Comisión de recarga de tarjeta
+        const descReload = usdBruto * (comBankReload / 100);
+        const usdAfterReload = usdBruto - descReload;
+        
+        // 2. Comisión de pago/pasarela de tarjeta
+        const descPay = usdAfterReload * (comBankPay / 100);
+        const usdAfterPay = usdAfterReload - descPay;
+        
+        // 3. Comisión BPay/Binance
+        const descBin = usdAfterPay * (comBin / 100);
+        const usdtFinal = usdAfterPay - descBin;
+        
         const ganancia = usdtFinal - usdt;
         const pct = (ganancia / usdt * 100).toFixed(2);
         const emoji = ganancia >= 0 ? '🟢' : '🔴';
-        return `${emoji} <b>${bankName}</b> (${comBank}% | Bpay/Gpay: ${comBin}%): ${usdtFinal.toFixed(2)} USDT → <b>+${ganancia.toFixed(2)} USDT (${pct}%)</b>`;
+        const detailStr = comBankPay > 0 
+            ? `Recarga: ${comBankReload}% | Pago: ${comBankPay}% | Bpay: ${comBin}%`
+            : `Recarga: ${comBankReload}% | Bpay: ${comBin}%`;
+        return `${emoji} <b>${bankName}</b> (${detailStr}): ${usdtFinal.toFixed(2)} USDT → <b>+${ganancia.toFixed(2)} USDT (${pct}%)</b>`;
     }
 
     if (binance > 0) {
@@ -510,6 +522,7 @@ async function runMonitor() {
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
 
 🧮 <b>ARBITRAJE — Base 100 USDT</b>
+${calcReport(effectiveBcv, binance, 'BDT', 1.5, 4.1, 1.5)}
 ${calcReport(effectiveBcv, binance, 'BDV (Digital)', 2.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'BDV (Física)', 1.5, 3.6)}
 ${calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6)}
