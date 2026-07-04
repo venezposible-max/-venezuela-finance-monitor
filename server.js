@@ -52,6 +52,7 @@ let monitorState = {
     binanceRate: 639.00,
     spread: 0,
     bpayCommission: 4.1,
+    visibleBanks: ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA', 'PROVINCIAL'],
     bankStatuses: { 
         'BDV': 'CERRADO 🔴', 
         'TESORO': 'CERRADO 🔴',
@@ -505,6 +506,36 @@ async function runMonitor() {
         const effectiveBcv = bcv * 1.005;
         const bcvStr = `${bcv.toFixed(2)} + Com: 0.5% (Total: ${effectiveBcv.toFixed(2)})`;
         const src = monitorState.dataSources;
+
+        const marketList = [];
+        if (monitorState.visibleBanks.includes('BDV')) marketList.push(`🇻🇪 <b>Venezuela (BDV):</b> ${monitorState.bankStatuses['BDV']}`);
+        if (monitorState.visibleBanks.includes('TESORO')) marketList.push(`💰 <b>Tesoro:</b> ${monitorState.bankStatuses['TESORO']}`);
+        if (monitorState.visibleBanks.includes('BDT')) marketList.push(`🏢 <b>BDT:</b> ${monitorState.bankStatuses['BDT']}`);
+        if (monitorState.visibleBanks.includes('ACTIVO')) marketList.push(`🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}`);
+        if (monitorState.visibleBanks.includes('BANCAMIGA')) marketList.push(`💎 <b>Bancamiga:</b> ${monitorState.bankStatuses['BANCAMIGA']}`);
+        if (monitorState.visibleBanks.includes('PROVINCIAL')) marketList.push(`💙 <b>Provincial:</b> ${monitorState.bankStatuses['PROVINCIAL']}`);
+
+        const activeReports = [];
+        if (monitorState.visibleBanks.includes('BDT')) {
+            activeReports.push(calcReport(effectiveBcv, binance, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5));
+        }
+        if (monitorState.visibleBanks.includes('BDV')) {
+            activeReports.push(calcReport(effectiveBcv, binance, 'BDV (Digital)', 2.5, 3.6));
+            activeReports.push(calcReport(effectiveBcv, binance, 'BDV (Física)', 1.5, 3.6));
+        }
+        if (monitorState.visibleBanks.includes('TESORO')) {
+            activeReports.push(calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6));
+        }
+        if (monitorState.visibleBanks.includes('ACTIVO')) {
+            activeReports.push(calcReport(effectiveBcv, binance, 'Activo', 1.5, 3.6));
+        }
+        if (monitorState.visibleBanks.includes('BANCAMIGA')) {
+            activeReports.push(calcReport(effectiveBcv, binance, 'Bancamiga', 5, 3.6));
+        }
+        if (monitorState.visibleBanks.includes('PROVINCIAL')) {
+            activeReports.push(calcReport(effectiveBcv, binance, 'Provincial', 0, 3.6));
+        }
+
         const report = `
 📊 <b>MONITOR DE ECONOMÍA VENEZUELA</b>
 ⏱ <i>Actualización: ${monitorState.lastUpdate}</i>
@@ -512,24 +543,13 @@ async function runMonitor() {
 🏦 <b>BCV (Intervención):</b> ${bcvStr} VES
 
 🏛 <b>MERCADO CAMBIARIO:</b>
-🇻🇪 <b>Venezuela (BDV):</b> ${monitorState.bankStatuses['BDV']}
-💰 <b>Tesoro:</b> ${monitorState.bankStatuses['TESORO']}
-🏢 <b>BDT:</b> ${monitorState.bankStatuses['BDT']}
-🏦 <b>Banco Activo:</b> ${monitorState.bankStatuses['ACTIVO']}
-💎 <b>Bancamiga:</b> ${monitorState.bankStatuses['BANCAMIGA']}
-💙 <b>Provincial:</b> ${monitorState.bankStatuses['PROVINCIAL']}
+${marketList.join('\n')}
 
 🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
 📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
 
 🧮 <b>ARBITRAJE — Base 100 USDT</b>
-${calcReport(effectiveBcv, binance, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5)}
-${calcReport(effectiveBcv, binance, 'BDV (Digital)', 2.5, 3.6)}
-${calcReport(effectiveBcv, binance, 'BDV (Física)', 1.5, 3.6)}
-${calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6)}
-${calcReport(effectiveBcv, binance, 'Activo', 1.5, 3.6)}
-${calcReport(effectiveBcv, binance, 'Bancamiga', 5, 3.6)}
-${calcReport(effectiveBcv, binance, 'Provincial', 0, 3.6)}
+${activeReports.join('\n')}
 
 📡 <i>Fuentes: BCV=${src.bcv} BDV=${src.bdv} TG=${src.telegram}</i>
 🔗 <a href="https://venezuela-finance-monitor-production.up.railway.app/calc.html">Calcula tu monto aquí</a>
@@ -633,6 +653,20 @@ app.post('/api/bpay/commission', (req, res) => {
         res.json({ success: true, state: monitorState });
     } else {
         res.status(400).json({ error: 'Comisión inválida' });
+    }
+});
+
+app.post('/api/banks/visibility', (req, res) => {
+    const { visibleBanks } = req.body;
+    if (Array.isArray(visibleBanks)) {
+        const validBanks = ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA', 'PROVINCIAL'];
+        monitorState.visibleBanks = visibleBanks.filter(b => validBanks.includes(b));
+        addLog(`🛠 MONITOREAR BANCOS: Actualizado a [${monitorState.visibleBanks.join(', ')}]`);
+        io.emit('state_update', monitorState);
+        runMonitor();
+        res.json({ success: true, state: monitorState });
+    } else {
+        res.status(400).json({ error: 'Formato inválido' });
     }
 });
 

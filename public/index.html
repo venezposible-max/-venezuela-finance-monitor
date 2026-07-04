@@ -182,6 +182,27 @@
 
         <div class="banks">
             <h3>Disponibilidad Bancaria</h3>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center;">
+                <span style="font-size: 11px; color: var(--subtext); font-weight: 700; width: 100%; text-transform: uppercase; letter-spacing: 0.5px;">Monitorear Bancos:</span>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="vis-BDV" onchange="updateBankVisibility('BDV')" checked> BDV
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="vis-TESORO" onchange="updateBankVisibility('TESORO')" checked> Tesoro
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="vis-BDT" onchange="updateBankVisibility('BDT')" checked> BDT
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="vis-ACTIVO" onchange="updateBankVisibility('ACTIVO')" checked> Activo
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="vis-BANCAMIGA" onchange="updateBankVisibility('BANCAMIGA')" checked> Bancamiga
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="vis-PROVINCIAL" onchange="updateBankVisibility('PROVINCIAL')" checked> Provincial
+                </label>
+            </div>
             <div class="bank-row">
                 <span>🇻🇪 Banco de Venezuela (BDV)</span>
                 <div class="switch-container">
@@ -389,6 +410,14 @@
                     row.style.borderColor = 'rgba(255,255,255,0.05)';
                     row.style.background = 'rgba(255,255,255,0.02)';
                 }
+
+                // Actualizar visibilidad del banco
+                const isVisible = (state.visibleBanks || []).includes(id);
+                row.style.display = isVisible ? 'flex' : 'none';
+
+                // Sincronizar el checkbox superior
+                const visCheck = document.getElementById(`vis-${id}`);
+                if (visCheck) visCheck.checked = isVisible;
             });
 
             // Actualizar botones de intervalo
@@ -457,19 +486,21 @@
             if (bcv === 0 || bin === 0) return;
             
             const banksList = [
-                { name: '🏢 Banco BDT', comReload: 1.5, comPay: 1.5, comBpay: bpay },
-                { name: '🇻🇪 BDV (Digital)', comReload: 2.5, comPay: 0, comBpay: 3.6 },
-                { name: '🇻🇪 BDV (Física)', comReload: 1.5, comPay: 0, comBpay: 3.6 },
-                { name: '💰 Banco del Tesoro', comReload: 2.5, comPay: 0, comBpay: 3.6 },
-                { name: '🏦 Banco Activo', comReload: 1.5, comPay: 0, comBpay: 3.6 },
-                { name: '💎 Bancamiga', comReload: 5.0, comPay: 0, comBpay: 3.6 },
-                { name: '💙 Banco Provincial', comReload: 0.0, comPay: 0, comBpay: 3.6 }
+                { id: 'BDT', name: '🏢 Banco BDT', comReload: 1.5, comPay: 1.5, comBpay: bpay },
+                { id: 'BDV', name: '🇻🇪 BDV (Digital)', comReload: 2.5, comPay: 0, comBpay: 3.6 },
+                { id: 'BDV', name: '🇻🇪 BDV (Física)', comReload: 1.5, comPay: 0, comBpay: 3.6 },
+                { id: 'TESORO', name: '💰 Banco del Tesoro', comReload: 2.5, comPay: 0, comBpay: 3.6 },
+                { id: 'ACTIVO', name: '🏦 Banco Activo', comReload: 1.5, comPay: 0, comBpay: 3.6 },
+                { id: 'BANCAMIGA', name: '💎 Bancamiga', comReload: 5.0, comPay: 0, comBpay: 3.6 },
+                { id: 'PROVINCIAL', name: '💙 Banco Provincial', comReload: 0.0, comPay: 0, comBpay: 3.6 }
             ];
             
             const container = document.getElementById('live-arbitrage-list');
             container.innerHTML = '';
             
-            banksList.forEach(bank => {
+            const visibleList = banksList.filter(b => (state.visibleBanks || []).includes(b.id));
+            
+            visibleList.forEach(bank => {
                 const usdt = 100;
                 const bolivares = usdt * bin;
                 const usdBruto = bolivares / (bcv * 1.005);
@@ -492,6 +523,25 @@
                 `;
                 container.appendChild(row);
             });
+        }
+
+        async function updateBankVisibility(bankId) {
+            const visibleBanks = [];
+            const ids = ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA', 'PROVINCIAL'];
+            ids.forEach(id => {
+                const ch = document.getElementById(`vis-${id}`);
+                if (ch && ch.checked) visibleBanks.push(id);
+            });
+
+            const res = await fetch('/api/banks/visibility', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ visibleBanks })
+            });
+
+            if (!res.ok) {
+                alert('Error al actualizar visibilidad de bancos');
+            }
         }
 
         socket.on('state_update', (state) => {
