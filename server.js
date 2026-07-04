@@ -503,8 +503,8 @@ async function runMonitor() {
         });
 
         const bcv = monitorState.bcvRate;
-        const effectiveBcv = bcv * 1.005;
-        const bcvStr = `${bcv.toFixed(2)} + Com: 0.5% (Total: ${effectiveBcv.toFixed(2)})`;
+        const effectiveBcv = bcv;
+        const bcvStr = `${bcv.toFixed(2)}`;
         const src = monitorState.dataSources;
 
         const marketList = [];

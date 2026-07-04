@@ -196,7 +196,7 @@
             }
 
             const bolivares = usdt * binanceRate;
-            const usdBruto = bolivares / (bcvRate * 1.005);
+            const usdBruto = bolivares / bcvRate;
             const comRecargaVal = usdBruto * (comReload / 100);
             const usdTarj = usdBruto - comRecargaVal;
             const comPagoVal = usdTarj * (comPay / 100);

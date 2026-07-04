@@ -503,7 +503,7 @@
             visibleList.forEach(bank => {
                 const usdt = 100;
                 const bolivares = usdt * bin;
-                const usdBruto = bolivares / (bcv * 1.005);
+                const usdBruto = bolivares / bcv;
                 const usdTarj = usdBruto * (1 - bank.comReload / 100);
                 const usdNet = usdTarj * (1 - bank.comPay / 100);
                 const usdtFinal = usdNet * (1 - bank.comBpay / 100);
@@ -624,8 +624,8 @@
             // PASO 1: Vendes USDT en Binance P2P → Recibes Bolívares
             const bolivares = usdt * bin;
 
-            // PASO 2: Compras USD por intervención con esos bolívares (usando tasa bcv efectiva con 0.5% com)
-            const usdBruto = bolivares / (bcv * 1.005);
+            // PASO 2: Compras USD por intervención con esos bolívares
+            const usdBruto = bolivares / bcv;
 
             // PASO 3: Se descuenta la comisión de recarga de tarjeta
             const comRecargaVal = usdBruto * (comReload / 100);
