@@ -47,7 +47,7 @@ if (!userBotSession) {
 let monitorState = {
     isRunning: false,
     lastUpdate: null,
-    bcvRate: 611,
+    bcvRate: 670.39,
     isBcvManual: true,
     binanceRate: 639.00,
     binanceRateMaker: 639.00,
