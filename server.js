@@ -50,7 +50,10 @@ let monitorState = {
     bcvRate: 611,
     isBcvManual: true,
     binanceRate: 639.00,
+    binanceRateMaker: 639.00,
+    binanceRateTaker: 630.00,
     spread: 0,
+    spreadTaker: 0,
     bpayCommission: 4.1,
     visibleBanks: ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA', 'PROVINCIAL'],
     bankStatuses: { 
@@ -81,32 +84,34 @@ function addLog(msg) {
     io.emit('log_update', log);
 }
 
-async function getBinanceRate() {
+async function getBinanceRate(tradeType = 'SELL') {
     try {
         const payload = {
             asset: 'USDT',
             fiat: 'VES',
-            tradeType: 'SELL', 
+            tradeType: tradeType, 
             merchantCheck: false,
             page: 1,
             rows: 10,
-            payTypes: [], // Sin filtros para agarrar el precio más competitivo del mercado
+            payTypes: [], 
             transAmount: "63500", 
             publisherType: null
         };
         const res = await axios.post('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', payload);
         const ads = res.data.data;
-        if (!ads || ads.length === 0) return monitorState.binanceRate;
+        
+        const defaultRate = tradeType === 'SELL' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
+        if (!ads || ads.length === 0) return defaultRate;
         
         const prices = ads.slice(0, 5).map(ad => parseFloat(ad.adv.price));
-        // Usamos el 3er precio (la mediana de los top 5) para eludir anuncios falsos/trampa con precios inflados
         const medianPrice = prices.length >= 3 ? prices[2] : prices[0];
         
-        addLog(`📊 Binance P2P: Precio de mercado actualizado (${medianPrice.toFixed(2)})`);
+        addLog(`📊 Binance P2P (${tradeType === 'SELL' ? 'Maker' : 'Taker'}): Precio actualizado (${medianPrice.toFixed(2)})`);
         return medianPrice;
     } catch (e) {
-        addLog(`❌ Error Binance: ${e.message}`);
-        return monitorState.binanceRate;
+        addLog(`❌ Error Binance (${tradeType}): ${e.message}`);
+        const defaultRate = tradeType === 'SELL' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
+        return defaultRate;
     }
 }
 
@@ -459,8 +464,9 @@ async function runMonitor() {
     if (!monitorState.isRunning) return;
     
     addLog('🔍 Escaneando mercados (multi-fuente)...');
-    const [binance, multiData] = await Promise.all([
-        getBinanceRate(),
+    const [binanceMaker, binanceTaker, multiData] = await Promise.all([
+        getBinanceRate('SELL'),
+        getBinanceRate('BUY'),
         getMultiSourceData()
     ]);
 
@@ -490,11 +496,17 @@ async function runMonitor() {
         return `${emoji} <b>${bankName}</b> (${detailStr}): ${usdtFinal.toFixed(2)} USDT → <b>+${ganancia.toFixed(2)} USDT (${pct}%)</b>`;
     }
 
-    if (binance > 0) {
-        monitorState.binanceRate = binance;
+    if (binanceMaker > 0 && binanceTaker > 0) {
+        monitorState.binanceRateMaker = binanceMaker;
+        monitorState.binanceRateTaker = binanceTaker;
+        monitorState.binanceRate = binanceMaker; // compatibilidad
+        
         monitorState.bcvRate = multiData.rate;
         monitorState.bankStatuses = multiData.banks;
-        monitorState.spread = ((binance - multiData.rate) / multiData.rate) * 100;
+        
+        monitorState.spread = ((binanceMaker - multiData.rate) / multiData.rate) * 100;
+        monitorState.spreadTaker = ((binanceTaker - multiData.rate) / multiData.rate) * 100;
+        
         monitorState.lastUpdate = new Date().toLocaleTimeString('es-VE', { 
             timeZone: 'America/Caracas',
             hour12: true,
@@ -515,26 +527,37 @@ async function runMonitor() {
         if (monitorState.visibleBanks.includes('BANCAMIGA')) marketList.push(`💎 <b>Bancamiga:</b> ${monitorState.bankStatuses['BANCAMIGA']}`);
         if (monitorState.visibleBanks.includes('PROVINCIAL')) marketList.push(`💙 <b>Provincial:</b> ${monitorState.bankStatuses['PROVINCIAL']}`);
 
-        const activeReports = [];
-        if (monitorState.visibleBanks.includes('BDT')) {
-            activeReports.push(calcReport(effectiveBcv, binance, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5));
+        const activeReportsMaker = [];
+        const activeReportsTaker = [];
+        
+        const bdtVisible = monitorState.visibleBanks.includes('BDT');
+        const bdvVisible = monitorState.visibleBanks.includes('BDV');
+        const tesoroVisible = monitorState.visibleBanks.includes('TESORO');
+        const activoVisible = monitorState.visibleBanks.includes('ACTIVO');
+        const bancamigaVisible = monitorState.visibleBanks.includes('BANCAMIGA');
+        const provincialVisible = monitorState.visibleBanks.includes('PROVINCIAL');
+
+        // Maker
+        if (bdtVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5));
+        if (bdvVisible) {
+            activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDV (Digital)', 2.5, 3.6));
+            activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDV (Física)', 1.5, 3.6));
         }
-        if (monitorState.visibleBanks.includes('BDV')) {
-            activeReports.push(calcReport(effectiveBcv, binance, 'BDV (Digital)', 2.5, 3.6));
-            activeReports.push(calcReport(effectiveBcv, binance, 'BDV (Física)', 1.5, 3.6));
+        if (tesoroVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Tesoro', 2.5, 3.6));
+        if (activoVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Activo', 1.5, 3.6));
+        if (bancamigaVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Bancamiga', 5, 3.6));
+        if (provincialVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Provincial', 0, 3.6));
+
+        // Taker
+        if (bdtVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5));
+        if (bdvVisible) {
+            activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDV (Digital)', 2.5, 3.6));
+            activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDV (Física)', 1.5, 3.6));
         }
-        if (monitorState.visibleBanks.includes('TESORO')) {
-            activeReports.push(calcReport(effectiveBcv, binance, 'Tesoro', 2.5, 3.6));
-        }
-        if (monitorState.visibleBanks.includes('ACTIVO')) {
-            activeReports.push(calcReport(effectiveBcv, binance, 'Activo', 1.5, 3.6));
-        }
-        if (monitorState.visibleBanks.includes('BANCAMIGA')) {
-            activeReports.push(calcReport(effectiveBcv, binance, 'Bancamiga', 5, 3.6));
-        }
-        if (monitorState.visibleBanks.includes('PROVINCIAL')) {
-            activeReports.push(calcReport(effectiveBcv, binance, 'Provincial', 0, 3.6));
-        }
+        if (tesoroVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Tesoro', 2.5, 3.6));
+        if (activoVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Activo', 1.5, 3.6));
+        if (bancamigaVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Bancamiga', 5, 3.6));
+        if (provincialVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Provincial', 0, 3.6));
 
         const report = `
 📊 <b>MONITOR DE ECONOMÍA VENEZUELA</b>
@@ -545,11 +568,18 @@ async function runMonitor() {
 🏛 <b>MERCADO CAMBIARIO:</b>
 ${marketList.join('\n')}
 
-🔶 <b>Binance P2P (USDT):</b> ${monitorState.binanceRate.toFixed(2)} VES
-📐 <b>Spread (BCV vs P2P):</b> ${monitorState.spread.toFixed(2)}%
+🔶 <b>Binance P2P (USDT):</b>
+• <b>Maker (Publicar):</b> ${monitorState.binanceRateMaker.toFixed(2)} VES
+• <b>Taker (Rápido):</b> ${monitorState.binanceRateTaker.toFixed(2)} VES
+📐 <b>Spread:</b> Maker: ${monitorState.spread.toFixed(2)}% | Taker: ${monitorState.spreadTaker.toFixed(2)}%
 
 🧮 <b>ARBITRAJE — Base 100 USDT</b>
-${activeReports.join('\n')}
+
+🛒 <b>Como MAKER (Publicando anuncio):</b>
+${activeReportsMaker.join('\n')}
+
+⚡️ <b>Como TAKER (Venta rápida):</b>
+${activeReportsTaker.join('\n')}
 
 📡 <i>Fuentes: BCV=${src.bcv} BDV=${src.bdv} TG=${src.telegram}</i>
 🔗 <a href="https://venezuela-finance-monitor-production.up.railway.app/calc.html">Calcula tu monto aquí</a>
@@ -629,8 +659,12 @@ app.post('/api/bcv/rate', (req, res) => {
     }
     
     // Recalcular spread
-    if (monitorState.binanceRate > 0 && monitorState.bcvRate > 0) {
-        monitorState.spread = ((monitorState.binanceRate - monitorState.bcvRate) / monitorState.bcvRate) * 100;
+    if (monitorState.binanceRateMaker > 0 && monitorState.bcvRate > 0) {
+        monitorState.spread = ((monitorState.binanceRateMaker - monitorState.bcvRate) / monitorState.bcvRate) * 100;
+        monitorState.binanceRate = monitorState.binanceRateMaker; // compatibilidad
+    }
+    if (monitorState.binanceRateTaker > 0 && monitorState.bcvRate > 0) {
+        monitorState.spreadTaker = ((monitorState.binanceRateTaker - monitorState.bcvRate) / monitorState.bcvRate) * 100;
     }
     
     // Emitir a sockets

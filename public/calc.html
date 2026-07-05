@@ -78,32 +78,48 @@
             <p class="subtitle">Calcula tu ganancia en tiempo real</p>
         </header>
 
-        <div class="rates-bar">
+        <div class="rates-bar" style="gap: 10px; flex-wrap: wrap;">
             <div class="rate-chip">
                 <div class="label">Intervención</div>
                 <div id="rate-bcv" class="val pulse">---</div>
             </div>
             <div class="rate-chip">
-                <div class="label">Binance P2P</div>
-                <div id="rate-bin" class="val pulse">---</div>
+                <div class="label">P2P Maker</div>
+                <div id="rate-bin-maker" class="val pulse">---</div>
             </div>
             <div class="rate-chip">
-                <div class="label">Spread</div>
-                <div id="rate-spread" class="val green pulse">---</div>
+                <div class="label">P2P Taker</div>
+                <div id="rate-bin-taker" class="val pulse">---</div>
+            </div>
+            <div class="rate-chip">
+                <div class="label">Spread Maker</div>
+                <div id="rate-spread-maker" class="val green pulse">---</div>
+            </div>
+            <div class="rate-chip">
+                <div class="label">Spread Taker</div>
+                <div id="rate-spread-taker" class="val green pulse">---</div>
             </div>
         </div>
 
         <div class="calc-box">
-            <div class="calc-inputs" style="margin-bottom: 12px;">
-                <select id="calc-bank" onchange="onBankSelect()" style="width: 100%;">
-                    <option value="BDT">🏢 BDT (Recarga: 1.5% | Pago: 1.5% | BPay: 4.1%)</option>
-                    <option value="BDV_DIGITAL">🇻🇪 BDV (Digital 2.5%)</option>
-                    <option value="BDV_FISICA">🇻🇪 BDV (Física 1.5%)</option>
-                    <option value="TESORO">💰 Tesoro (2.5%)</option>
-                    <option value="ACTIVO">🏦 Activo (1.5%)</option>
-                    <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
-                    <option value="PROVINCIAL">💙 Provincial (0%)</option>
-                </select>
+            <div class="calc-inputs" style="margin-bottom: 12px; gap: 8px;">
+                <div style="flex: 2;">
+                    <select id="calc-bank" onchange="onBankSelect()" style="width: 100%;">
+                        <option value="BDT">🏢 BDT (Recarga: 1.5% | Pago: 1.5% | BPay: 4.1%)</option>
+                        <option value="BDV_DIGITAL">🇻🇪 BDV (Digital 2.5%)</option>
+                        <option value="BDV_FISICA">🇻🇪 BDV (Física 1.5%)</option>
+                        <option value="TESORO">💰 Tesoro (2.5%)</option>
+                        <option value="ACTIVO">🏦 Activo (1.5%)</option>
+                        <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
+                        <option value="PROVINCIAL">💙 Provincial (0%)</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <select id="calc-p2p-type" onchange="calcArbitrage()" style="width: 100%; height: 42px; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px; font-weight: 600; padding: 0 10px; cursor: pointer;">
+                        <option value="maker">Maker (Anuncio)</option>
+                        <option value="taker">Taker (Rápido)</option>
+                    </select>
+                </div>
             </div>
             <div class="calc-inputs" style="gap: 8px; margin-bottom: 20px;">
                 <div style="flex: 1.2; min-width: 110px;">
@@ -149,9 +165,8 @@
         </div>
     </div>
 
-    <script>
         const socket = io();
-        let bcvRate = 0, binanceRate = 0;
+        let bcvRate = 0, binanceRateMaker = 0, binanceRateTaker = 0;
 
         const DEFAULT_COMISIONES = {
             BDT: { recarga: 1.5, pago: 1.5, bpay: 4.1 },
@@ -175,11 +190,24 @@
 
         socket.on('state_update', (state) => {
             bcvRate = state.bcvRate || 0;
-            binanceRate = state.binanceRate || 0;
+            binanceRateMaker = state.binanceRateMaker || 0;
+            binanceRateTaker = state.binanceRateTaker || 0;
 
             document.getElementById('rate-bcv').innerText = bcvRate > 0 ? bcvRate.toFixed(2) : '---';
-            document.getElementById('rate-bin').innerText = binanceRate > 0 ? binanceRate.toFixed(2) : '---';
-            document.getElementById('rate-spread').innerText = state.spread ? state.spread.toFixed(2) + '%' : '---';
+            document.getElementById('rate-bin-maker').innerText = binanceRateMaker > 0 ? binanceRateMaker.toFixed(2) : '---';
+            document.getElementById('rate-bin-taker').innerText = binanceRateTaker > 0 ? binanceRateTaker.toFixed(2) : '---';
+            
+            const spMaker = state.spread || 0;
+            const spTaker = state.spreadTaker || 0;
+            
+            const spMakerEl = document.getElementById('rate-spread-maker');
+            const spTakerEl = document.getElementById('rate-spread-taker');
+            
+            spMakerEl.innerText = spMaker.toFixed(2) + '%';
+            spMakerEl.className = spMaker >= 0 ? 'val green pulse' : 'val red pulse';
+            
+            spTakerEl.innerText = spTaker.toFixed(2) + '%';
+            spTakerEl.className = spTaker >= 0 ? 'val green pulse' : 'val red pulse';
 
             document.querySelectorAll('.pulse').forEach(el => el.classList.remove('pulse'));
         });
@@ -190,12 +218,15 @@
             const comPay = parseFloat(document.getElementById('calc-com-pay').value) || 0;
             const comBpay = parseFloat(document.getElementById('calc-com-bpay').value) || 0;
 
-            if (bcvRate === 0 || binanceRate === 0) {
+            const p2pType = document.getElementById('calc-p2p-type').value;
+            const binRate = p2pType === 'maker' ? binanceRateMaker : binanceRateTaker;
+
+            if (bcvRate === 0 || binRate === 0) {
                 alert('⏳ Esperando tasas en vivo del monitor...');
                 return;
             }
 
-            const bolivares = usdt * binanceRate;
+            const bolivares = usdt * binRate;
             const usdBruto = bolivares / bcvRate;
             const comRecargaVal = usdBruto * (comReload / 100);
             const usdTarj = usdBruto - comRecargaVal;

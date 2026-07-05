@@ -168,15 +168,28 @@
                     </div>
                 </div>
             </div>
-            <div class="card">
-                <h3>Binance P2P</h3>
-                <div id="binance-val" class="value">---</div>
-                <div class="sub">Tasa Promedio USDT</div>
+            <div class="card" style="display: flex; flex-direction: column; gap: 6px;">
+                <h3 style="margin-bottom: 0;">Binance P2P</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <span style="font-size: 12px; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Maker (Publicar):</span>
+                    <span id="binance-maker-val" style="font-size: 18px; font-weight: 800; color: #fff;">---</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Taker (Rápido):</span>
+                    <span id="binance-taker-val" style="font-size: 18px; font-weight: 800; color: #fff;">---</span>
+                </div>
             </div>
-            <div class="card">
-                <h3>Brecha / Spread</h3>
-                <div id="spread-val" class="value" style="color: var(--red);">---</div>
-                <div id="last-update" class="sub">Última actualización: Nunca</div>
+            <div class="card" style="display: flex; flex-direction: column; gap: 6px;">
+                <h3 style="margin-bottom: 0;">Brecha / Spread</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <span style="font-size: 12px; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Maker:</span>
+                    <span id="spread-maker-val" style="font-size: 16px; font-weight: 800;">---</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Taker:</span>
+                    <span id="spread-taker-val" style="font-size: 16px; font-weight: 800;">---</span>
+                </div>
+                <div id="last-update" class="sub" style="margin-top: 5px;">Última actualización: Nunca</div>
             </div>
         </div>
 
@@ -273,7 +286,13 @@
 
         <!-- Visualización de Arbitraje en Vivo -->
         <div class="banks" id="live-arbitrage-box" style="margin-bottom: 30px;">
-            <h3>📊 Arbitraje en Vivo (Base 100 USDT)</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin-bottom: 0;">📊 Arbitraje en Vivo (Base 100 USDT)</h3>
+                <select id="live-p2p-type" onchange="renderLiveArbitrage(latestState)" style="height: 30px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 12px; font-weight: 700; padding: 0 8px; cursor: pointer;">
+                    <option value="maker">Como Maker (Anuncio)</option>
+                    <option value="taker">Como Taker (Rápido)</option>
+                </select>
+            </div>
             <div id="live-arbitrage-list">
                 <!-- Se llenará dinámicamente -->
             </div>
@@ -282,16 +301,26 @@
         <!-- Calculadora de Arbitraje -->
         <div class="calc-box">
             <h3>🧮 Calculadora de Arbitraje</h3>
-            <div class="calc-inputs" style="margin-bottom: 12px;">
-                <select id="calc-bank" onchange="onBankSelect()" style="width: 100%;">
-                    <option value="BDT">🏢 BDT (Recarga: 1.5% | Pago: 1.5% | BPay: 4.1%)</option>
-                    <option value="BDV_DIGITAL">🇻🇪 BDV (Digital 2.5%)</option>
-                    <option value="BDV_FISICA">🇻🇪 BDV (Física 1.5%)</option>
-                    <option value="TESORO">💰 Tesoro (2.5%)</option>
-                    <option value="ACTIVO">🏦 Activo (1.5%)</option>
-                    <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
-                    <option value="PROVINCIAL">💙 Provincial (0%)</option>
-                </select>
+            <div class="calc-inputs" style="margin-bottom: 12px; gap: 8px;">
+                <div style="flex: 2;">
+                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Banco Intervención</label>
+                    <select id="calc-bank" onchange="onBankSelect()" style="width: 100%;">
+                        <option value="BDT">🏢 BDT (Recarga: 1.5% | Pago: 1.5% | BPay: 4.1%)</option>
+                        <option value="BDV_DIGITAL">🇻🇪 BDV (Digital 2.5%)</option>
+                        <option value="BDV_FISICA">🇻🇪 BDV (Física 1.5%)</option>
+                        <option value="TESORO">💰 Tesoro (2.5%)</option>
+                        <option value="ACTIVO">🏦 Activo (1.5%)</option>
+                        <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
+                        <option value="PROVINCIAL">💙 Provincial (0%)</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Tasa P2P</label>
+                    <select id="calc-p2p-type" onchange="calcArbitrage()" style="width: 100%; height: 42px; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px; font-weight: 600; padding: 0 10px; cursor: pointer;">
+                        <option value="maker">Maker (Anuncio)</option>
+                        <option value="taker">Taker (Rápido)</option>
+                    </select>
+                </div>
             </div>
             <div class="calc-inputs" style="gap: 8px; margin-bottom: 20px;">
                 <div style="flex: 1.2; min-width: 110px;">
@@ -373,9 +402,21 @@
         function updateUI(state) {
             currentRunningStatus = state.isRunning;
             document.getElementById('bcv-val').innerText = state.bcvRate.toFixed(2) + ' Bs';
-            document.getElementById('binance-val').innerText = (state.binanceRate || 0).toFixed(2) + ' Bs';
-            document.getElementById('spread-val').innerText = (state.spread || 0).toFixed(2) + '%';
-            document.getElementById('last-update').innerText = 'Actualizado: ' + (state.lastUpdate || '---');
+            
+            document.getElementById('binance-maker-val').innerText = (state.binanceRateMaker || 0).toFixed(2) + ' Bs';
+            document.getElementById('binance-taker-val').innerText = (state.binanceRateTaker || 0).toFixed(2) + ' Bs';
+            
+            const spMaker = state.spread || 0;
+            const spTaker = state.spreadTaker || 0;
+            
+            const spMakerEl = document.getElementById('spread-maker-val');
+            const spTakerEl = document.getElementById('spread-taker-val');
+            
+            spMakerEl.innerText = spMaker.toFixed(2) + '%';
+            spMakerEl.style.color = spMaker >= 0 ? 'var(--green)' : 'var(--red)';
+            
+            spTakerEl.innerText = spTaker.toFixed(2) + '%';
+            spTakerEl.style.color = spTaker >= 0 ? 'var(--green)' : 'var(--red)';
 
             // Update BCV card manual state
             const bcvCard = document.getElementById('bcv-card');
@@ -480,7 +521,8 @@
 
         function renderLiveArbitrage(state) {
             const bcv = state.bcvRate || 0;
-            const bin = state.binanceRate || 0;
+            const p2pType = document.getElementById('live-p2p-type').value;
+            const bin = p2pType === 'maker' ? (state.binanceRateMaker || 0) : (state.binanceRateTaker || 0);
             const bpay = state.bpayCommission || 4.1;
             
             if (bcv === 0 || bin === 0) return;
@@ -610,7 +652,8 @@
         function calcArbitrage() {
             const usdt = parseFloat(document.getElementById('calc-usdt').value) || 0;
             const bcv = latestState.bcvRate || 0;
-            const bin = latestState.binanceRate || 0;
+            const p2pType = document.getElementById('calc-p2p-type').value;
+            const bin = p2pType === 'maker' ? (latestState.binanceRateMaker || 0) : (latestState.binanceRateTaker || 0);
 
             const comReload = parseFloat(document.getElementById('calc-com-reload').value) || 0;
             const comPay = parseFloat(document.getElementById('calc-com-pay').value) || 0;
