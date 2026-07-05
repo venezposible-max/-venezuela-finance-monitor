@@ -54,6 +54,8 @@ let monitorState = {
     binanceRateTaker: 630.00,
     spread: 0,
     spreadTaker: 0,
+    trend: 'STABLE',
+    buyingPressure: 50,
     bpayCommission: 4.1,
     visibleBanks: ['BDV', 'TESORO', 'BDT', 'ACTIVO', 'BANCAMIGA', 'PROVINCIAL'],
     bankStatuses: { 
@@ -76,6 +78,8 @@ let lastLiquidityVolume = 0;
 let lastLiquidityAlert = 0;
 let lastNinjaPrice = 0;
 let lastPriceAlert = 0;
+
+let priceHistory = [];
 
 function addLog(msg) {
     const log = { time: new Date().toLocaleTimeString(), text: msg };
@@ -101,17 +105,19 @@ async function getBinanceRate(tradeType = 'SELL') {
         const ads = res.data.data;
         
         const defaultRate = tradeType === 'BUY' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
-        if (!ads || ads.length === 0) return defaultRate;
+        if (!ads || ads.length === 0) return { price: defaultRate, volume: 0 };
         
         const prices = ads.slice(0, 5).map(ad => parseFloat(ad.adv.price));
         const medianPrice = prices.length >= 3 ? prices[2] : prices[0];
         
+        const volume = ads.reduce((acc, ad) => acc + parseFloat(ad.adv.surplusAmount), 0);
+        
         addLog(`📊 Binance P2P (${tradeType === 'BUY' ? 'Maker' : 'Taker'}): Precio actualizado (${medianPrice.toFixed(2)})`);
-        return medianPrice;
+        return { price: medianPrice, volume: volume };
     } catch (e) {
         addLog(`❌ Error Binance (${tradeType}): ${e.message}`);
         const defaultRate = tradeType === 'BUY' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
-        return defaultRate;
+        return { price: defaultRate, volume: 0 };
     }
 }
 
@@ -464,11 +470,13 @@ async function runMonitor() {
     if (!monitorState.isRunning) return;
     
     addLog('🔍 Escaneando mercados (multi-fuente)...');
-    const [binanceMaker, binanceTaker, multiData] = await Promise.all([
-        getBinanceRate('BUY'),
-        getBinanceRate('SELL'),
+    const [binanceMakerData, binanceTakerData, multiData] = await Promise.all([
+        getBinanceRate('BUY'),  // Maker
+        getBinanceRate('SELL'), // Taker
         getMultiSourceData()
     ]);
+    const binanceMaker = binanceMakerData.price;
+    const binanceTaker = binanceTakerData.price;
 
     function calcReport(bcv, bin, bankName, comBankReload, comBin, comBankPay = 0) {
         const usdt = 100;
@@ -507,6 +515,32 @@ async function runMonitor() {
         monitorState.spread = ((binanceMaker - multiData.rate) / multiData.rate) * 100;
         monitorState.spreadTaker = ((binanceTaker - multiData.rate) / multiData.rate) * 100;
         
+        // Calcular Presión de Compra
+        const demandVolume = binanceMakerData.volume;
+        const supplyVolume = binanceTakerData.volume;
+        let pressure = 50;
+        if (demandVolume + supplyVolume > 0) {
+            pressure = (demandVolume / (demandVolume + supplyVolume)) * 100;
+        }
+        monitorState.buyingPressure = pressure;
+
+        // Calcular Tendencia
+        priceHistory.push(binanceMaker);
+        if (priceHistory.length > 5) {
+            priceHistory.shift();
+        }
+        let trend = 'STABLE';
+        if (priceHistory.length >= 3) {
+            const previousPrices = priceHistory.slice(0, -1);
+            const avg = previousPrices.reduce((a, b) => a + b, 0) / previousPrices.length;
+            if (binanceMaker > avg + 0.05) {
+                trend = 'UP';
+            } else if (binanceMaker < avg - 0.05) {
+                trend = 'DOWN';
+            }
+        }
+        monitorState.trend = trend;
+
         monitorState.lastUpdate = new Date().toLocaleTimeString('es-VE', { 
             timeZone: 'America/Caracas',
             hour12: true,
@@ -565,7 +599,11 @@ async function runMonitor() {
 
 🏦 <b>BCV (Intervención):</b> ${bcvStr} VES
 
-🏛 <b>MERCADO CAMBIARIO:</b>
+📈 <b>TENDENCIA DEL MERCADO:</b>
+• <b>Dirección:</b> ${monitorState.trend === 'UP' ? '⬆️ ALCISTA' : (monitorState.trend === 'DOWN' ? '⬇️ BAJISTA' : '➡️ ESTABLE')}
+• <b>Presión de Compra:</b> ${monitorState.buyingPressure.toFixed(1)}% (${monitorState.buyingPressure >= 53 ? 'Fuerte Demanda' : (monitorState.buyingPressure <= 47 ? 'Fuerte Oferta' : 'Equilibrado')})
+
+ 🏛 <b>MERCADO CAMBIARIO:</b>
 ${marketList.join('\n')}
 
 🔶 <b>Binance P2P (USDT):</b>

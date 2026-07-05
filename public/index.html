@@ -191,6 +191,22 @@
                 </div>
                 <div id="last-update" class="sub" style="margin-top: 5px;">Última actualización: Nunca</div>
             </div>
+            <div class="card" id="trend-card" style="display: flex; flex-direction: column; gap: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                <h3 style="margin-bottom: 0;">Tendencia de Mercado</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <span style="font-size: 12px; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Dirección:</span>
+                    <span id="trend-direction-val" style="font-size: 16px; font-weight: 800; color: #fff;">---</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--subtext);">
+                        <span>PRESIÓN DE COMPRA</span>
+                        <span id="pressure-pct-val">---%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                        <div id="pressure-bar" style="width: 50%; height: 100%; background: var(--green); transition: width 0.5s ease;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="banks">
@@ -486,6 +502,35 @@
             
             // Update BPay card state
             document.getElementById('bpay-val').innerText = (state.bpayCommission || 4.1).toFixed(2) + '%';
+            
+            // Update Trend card state
+            const trendDirectionEl = document.getElementById('trend-direction-val');
+            const pressurePctEl = document.getElementById('pressure-pct-val');
+            const pressureBarEl = document.getElementById('pressure-bar');
+            
+            const trend = state.trend || 'STABLE';
+            const pressure = state.buyingPressure || 50;
+            
+            if (trend === 'UP') {
+                trendDirectionEl.innerText = '⬆️ ALCISTA';
+                trendDirectionEl.style.color = 'var(--green)';
+            } else if (trend === 'DOWN') {
+                trendDirectionEl.innerText = '⬇️ BAJISTA';
+                trendDirectionEl.style.color = 'var(--red)';
+            } else {
+                trendDirectionEl.innerText = '➡️ ESTABLE';
+                trendDirectionEl.style.color = '#fff';
+            }
+            
+            pressurePctEl.innerText = pressure.toFixed(1) + '%';
+            pressureBarEl.style.width = pressure + '%';
+            if (pressure >= 53) {
+                pressureBarEl.style.background = 'var(--green)';
+            } else if (pressure <= 47) {
+                pressureBarEl.style.background = 'var(--red)';
+            } else {
+                pressureBarEl.style.background = 'var(--accent)';
+            }
             
             // Render Live Arbitrage
             renderLiveArbitrage(state);
