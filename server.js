@@ -100,17 +100,17 @@ async function getBinanceRate(tradeType = 'SELL') {
         const res = await axios.post('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', payload);
         const ads = res.data.data;
         
-        const defaultRate = tradeType === 'SELL' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
+        const defaultRate = tradeType === 'BUY' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
         if (!ads || ads.length === 0) return defaultRate;
         
         const prices = ads.slice(0, 5).map(ad => parseFloat(ad.adv.price));
         const medianPrice = prices.length >= 3 ? prices[2] : prices[0];
         
-        addLog(`📊 Binance P2P (${tradeType === 'SELL' ? 'Maker' : 'Taker'}): Precio actualizado (${medianPrice.toFixed(2)})`);
+        addLog(`📊 Binance P2P (${tradeType === 'BUY' ? 'Maker' : 'Taker'}): Precio actualizado (${medianPrice.toFixed(2)})`);
         return medianPrice;
     } catch (e) {
         addLog(`❌ Error Binance (${tradeType}): ${e.message}`);
-        const defaultRate = tradeType === 'SELL' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
+        const defaultRate = tradeType === 'BUY' ? monitorState.binanceRateMaker : monitorState.binanceRateTaker;
         return defaultRate;
     }
 }
@@ -465,8 +465,8 @@ async function runMonitor() {
     
     addLog('🔍 Escaneando mercados (multi-fuente)...');
     const [binanceMaker, binanceTaker, multiData] = await Promise.all([
-        getBinanceRate('SELL'),
         getBinanceRate('BUY'),
+        getBinanceRate('SELL'),
         getMultiSourceData()
     ]);
 
