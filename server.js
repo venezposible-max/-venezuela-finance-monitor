@@ -970,6 +970,9 @@ server.listen(PORT, () => {
     checkLiquidity(); // Ejecución inicial
     checkBankStatus(); // Ejecución inicial
 
-    // Iniciar UserBot para espejo en tiempo real
-    startUserBot();
+    // Iniciar UserBot para espejo en tiempo real con un delay de 15 segundos
+    // Esto evita AUTH_KEY_DUPLICATED durante los despliegues progresivos (Rolling deploys) de Railway
+    setTimeout(() => {
+        startUserBot();
+    }, 15000);
 });
