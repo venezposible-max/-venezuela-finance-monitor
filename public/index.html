@@ -384,8 +384,8 @@
         </div>
 
         <h3>Terminal de Actividad</h3>
-        <div id="logs" class="log-container">
-            <div class="log-line">Esperando conexión con el servidor...</div>
+         <div id="logs" class="log-container">
+            <div class="log-line" id="log-connecting">Esperando conexión con el servidor...</div>
         </div>
     </div>
 
@@ -655,6 +655,25 @@
                 alert('Error al actualizar visibilidad de bancos');
             }
         }
+
+        socket.on('connect', () => {
+            const connEl = document.getElementById('log-connecting');
+            if (connEl) connEl.remove();
+            
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.style.color = 'var(--green)';
+            line.innerHTML = `<span class="log-time">[${new Date().toLocaleTimeString()}]</span> Conectado al servidor.`;
+            logsDiv.prepend(line);
+        });
+
+        socket.on('disconnect', () => {
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.style.color = 'var(--red)';
+            line.innerHTML = `<span class="log-time">[${new Date().toLocaleTimeString()}]</span> Desconectado del servidor. Reconectando...`;
+            logsDiv.prepend(line);
+        });
 
         socket.on('state_update', (state) => {
             updateUI(state);
