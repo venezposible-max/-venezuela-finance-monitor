@@ -647,6 +647,65 @@ app.post('/api/comment', async (req, res) => {
     }
 });
 
+app.post('/api/forecast/alert', async (req, res) => {
+    try {
+        const trend = monitorState.trend;
+        const pressure = monitorState.buyingPressure;
+        const bcv = monitorState.bcvRate;
+        const maker = monitorState.binanceRateMaker;
+        const taker = monitorState.binanceRateTaker;
+        
+        const trendEmoji = trend === 'UP' ? '⬆️' : (trend === 'DOWN' ? '⬇️' : '➡️');
+        const trendLabel = trend === 'UP' ? 'ALCISTA' : (trend === 'DOWN' ? 'BAJISTA' : 'ESTABLE');
+        const pressureStatus = pressure >= 53 ? 'Fuerte Demanda' : (pressure <= 47 ? 'Fuerte Oferta' : 'Equilibrado');
+        
+        let analysis = '';
+        if (pressure <= 25) {
+            analysis = '🚨 <b>FUERTE PRESIÓN BAJISTA OPERATIVA:</b> La oferta de USDT duplica o supera por mucho a la demanda. Los vendedores están compitiendo agresivamente bajando precios para captar bolívares. Se pronostica que la tasa P2P seguirá cayendo levemente o se mantendrá en mínimos en las próximas horas.';
+        } else if (pressure < 47) {
+            analysis = '📉 <b>PRESIÓN BAJISTA MODERADA:</b> Hay más vendedores que compradores en la cola. La tasa tiende a deslizarse hacia abajo lentamente.';
+        } else if (pressure >= 75) {
+            analysis = '🚀 <b>FUERTE PRESIÓN ALCISTA:</b> La demanda de USDT supera con creces la oferta disponible. Pocos comerciantes vendiendo, muchos comprando. Se pronostica tendencia alcista inmediata en la tasa P2P.';
+        } else if (pressure > 53) {
+            analysis = '📈 <b>PRESIÓN ALCISTA MODERADA:</b> La demanda es favorable. La tasa tiende a subir o mantenerse estable al alza.';
+        } else {
+            analysis = '➡️ <b>MERCADO EQUILIBRADO:</b> Oferta y demanda se encuentran en rangos estables. No se prevén variaciones bruscas de precio a muy corto plazo.';
+        }
+        
+        const breakEven = 720.50; // Calculado para BDT/BPay
+        const marginMaker = ((maker - breakEven) / breakEven) * 100;
+        const marginTaker = ((taker - breakEven) / breakEven) * 100;
+        
+        const time = new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        const message = `📊 <b>ANÁLISIS DE MERCADO & PREDICCIÓN</b>
+⏱ <i>Generado: ${time}</i>
+
+💵 <b>TASAS EN VIVO:</b>
+• <b>BCV Intervención:</b> ${bcv.toFixed(2)} VES
+• <b>P2P Maker:</b> ${maker.toFixed(2)} VES (Margen BDT: +${marginMaker.toFixed(2)}%)
+• <b>P2P Taker:</b> ${taker.toFixed(2)} VES (Margen BDT: +${marginTaker.toFixed(2)}%)
+
+📈 <b>MÉTRICAS DE FUERZA:</b>
+• <b>Dirección:</b> ${trendEmoji} <b>${trendLabel}</b>
+• <b>Presión de Compra:</b> <b>${pressure.toFixed(1)}%</b> (${pressureStatus})
+
+🔍 <b>PROSPECTO / DIAGNÓSTICO:</b>
+${analysis}
+
+💡 <b>Recomendación operativa:</b>
+${pressure <= 35 ? '⚠️ Si necesitas bolívares para la intervención, liquida antes del cierre de plataformas bancarias. Evita dejar saldos congelados por mantenimientos nocturnos.' : '✅ Buen momento para operar o mantener según tus objetivos de rentabilidad bancaria.'}
+
+⚠️ <i>Nota: Este análisis automatizado es cuantitativo y no constituye asesoría financiera formal.</i>`;
+
+        await sendTelegramAlert(message);
+        addLog('📊 Análisis y predicción enviados a Telegram.');
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/bank/toggle', (req, res) => {
     const { bankId } = req.body;
     if (monitorState.bankStatuses[bankId]) {

@@ -206,6 +206,9 @@
                         <div id="pressure-bar" style="width: 50%; height: 100%; background: var(--green); transition: width 0.5s ease;"></div>
                     </div>
                 </div>
+                <button onclick="sendForecastAlert()" style="width: 100%; margin-top: 8px; padding: 10px 0; border-radius: 10px; background: var(--accent); border: none; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.2s ease, transform 0.1s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+                    📊 Enviar Análisis a Telegram
+                </button>
             </div>
         </div>
 
@@ -561,6 +564,28 @@
                 document.getElementById('bpay-edit-box').style.display = 'none';
             } else {
                 alert('Error al guardar la comisión');
+            }
+        }
+
+        async function sendForecastAlert() {
+            const btn = document.querySelector("#trend-card button");
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Enviando...';
+            
+            try {
+                const res = await fetch('/api/forecast/alert', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ Análisis y predicción enviados a Telegram.');
+                } else {
+                    alert('❌ Error al enviar análisis: ' + data.error);
+                }
+            } catch (err) {
+                alert('❌ Error de conexión: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 
