@@ -571,27 +571,29 @@ async function runMonitor() {
         const bancamigaVisible = monitorState.visibleBanks.includes('BANCAMIGA');
         const provincialVisible = monitorState.visibleBanks.includes('PROVINCIAL');
 
+        const bpayCom = monitorState.bpayCommission || 4.1;
+
         // Maker
-        if (bdtVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5));
+        if (bdtVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDT', 1.5, bpayCom, 1.5));
         if (bdvVisible) {
-            activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDV (Digital)', 2.5, 3.6));
-            activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDV (Física)', 1.5, 3.6));
+            activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDV (Digital)', 2.5, bpayCom));
+            activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'BDV (Física)', 1.5, bpayCom));
         }
-        if (tesoroVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Tesoro', 2.5, 3.6));
-        if (activoVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Activo', 1.5, 3.6));
-        if (bancamigaVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Bancamiga', 5, 3.6));
-        if (provincialVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Provincial', 0, 3.6));
+        if (tesoroVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Tesoro', 2.5, bpayCom));
+        if (activoVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Activo', 1.5, bpayCom));
+        if (bancamigaVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Bancamiga', 5, bpayCom));
+        if (provincialVisible) activeReportsMaker.push(calcReport(effectiveBcv, binanceMaker, 'Provincial', 0, bpayCom));
 
         // Taker
-        if (bdtVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDT', 1.5, monitorState.bpayCommission || 4.1, 1.5));
+        if (bdtVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDT', 1.5, bpayCom, 1.5));
         if (bdvVisible) {
-            activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDV (Digital)', 2.5, 3.6));
-            activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDV (Física)', 1.5, 3.6));
+            activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDV (Digital)', 2.5, bpayCom));
+            activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'BDV (Física)', 1.5, bpayCom));
         }
-        if (tesoroVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Tesoro', 2.5, 3.6));
-        if (activoVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Activo', 1.5, 3.6));
-        if (bancamigaVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Bancamiga', 5, 3.6));
-        if (provincialVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Provincial', 0, 3.6));
+        if (tesoroVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Tesoro', 2.5, bpayCom));
+        if (activoVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Activo', 1.5, bpayCom));
+        if (bancamigaVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Bancamiga', 5, bpayCom));
+        if (provincialVisible) activeReportsTaker.push(calcReport(effectiveBcv, binanceTaker, 'Provincial', 0, bpayCom));
 
         const report = `
 📊 <b>MONITOR DE ECONOMÍA VENEZUELA</b>
@@ -672,7 +674,8 @@ app.post('/api/forecast/alert', async (req, res) => {
             analysis = '➡️ <b>MERCADO EQUILIBRADO:</b> Oferta y demanda se encuentran en rangos estables. No se prevén variaciones bruscas de precio a muy corto plazo.';
         }
         
-        const breakEven = 720.50; // Calculado para BDT/BPay
+        const bpayCom = monitorState.bpayCommission || 4.1;
+        const breakEven = bcv / (1 - bpayCom/100) / 0.985 / 0.985; // BDT/BPay formula dinámica
         const marginMaker = ((maker - breakEven) / breakEven) * 100;
         const marginTaker = ((taker - breakEven) / breakEven) * 100;
         

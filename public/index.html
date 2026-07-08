@@ -599,12 +599,12 @@
             
             const banksList = [
                 { id: 'BDT', name: '🏢 Banco BDT', comReload: 1.5, comPay: 1.5, comBpay: bpay },
-                { id: 'BDV', name: '🇻🇪 BDV (Digital)', comReload: 2.5, comPay: 0, comBpay: 3.6 },
-                { id: 'BDV', name: '🇻🇪 BDV (Física)', comReload: 1.5, comPay: 0, comBpay: 3.6 },
-                { id: 'TESORO', name: '💰 Banco del Tesoro', comReload: 2.5, comPay: 0, comBpay: 3.6 },
-                { id: 'ACTIVO', name: '🏦 Banco Activo', comReload: 1.5, comPay: 0, comBpay: 3.6 },
-                { id: 'BANCAMIGA', name: '💎 Bancamiga', comReload: 5.0, comPay: 0, comBpay: 3.6 },
-                { id: 'PROVINCIAL', name: '💙 Banco Provincial', comReload: 0.0, comPay: 0, comBpay: 3.6 }
+                { id: 'BDV', name: '🇻🇪 BDV (Digital)', comReload: 2.5, comPay: 0, comBpay: bpay },
+                { id: 'BDV', name: '🇻🇪 BDV (Física)', comReload: 1.5, comPay: 0, comBpay: bpay },
+                { id: 'TESORO', name: '💰 Banco del Tesoro', comReload: 2.5, comPay: 0, comBpay: bpay },
+                { id: 'ACTIVO', name: '🏦 Banco Activo', comReload: 1.5, comPay: 0, comBpay: bpay },
+                { id: 'BANCAMIGA', name: '💎 Bancamiga', comReload: 5.0, comPay: 0, comBpay: bpay },
+                { id: 'PROVINCIAL', name: '💙 Banco Provincial', comReload: 0.0, comPay: 0, comBpay: bpay }
             ];
             
             const container = document.getElementById('live-arbitrage-list');
@@ -734,7 +734,7 @@
             if (com) {
                 document.getElementById('calc-com-reload').value = com.recarga;
                 document.getElementById('calc-com-pay').value = com.pago;
-                document.getElementById('calc-com-bpay').value = com.bpay;
+                document.getElementById('calc-com-bpay').value = latestState ? (latestState.bpayCommission || 4.1) : com.bpay;
             }
         }
 
