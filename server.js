@@ -941,7 +941,7 @@ async function checkWalletStatuses() {
             binanceWalletStatusCache = newCache;
             console.log('[ARBITRAJE] Estados de billeteras actualizados de Binance.');
         } catch (err) {
-            console.error('[ARBITRAJE] Error consultando billeteras de Binance:', err.message);
+            console.error('[ARBITRAJE] Error consultando billeteras de Binance:', err.message, err.response?.data ? JSON.stringify(err.response.data) : '');
         }
     }
 
@@ -989,7 +989,7 @@ async function checkWalletStatuses() {
                 console.log('[ARBITRAJE] Estados de billeteras actualizados de MEXC.');
             }
         } catch (err) {
-            console.error('[ARBITRAJE] Error consultando billeteras de MEXC:', err.message);
+            console.error('[ARBITRAJE] Error consultando billeteras de MEXC:', err.message, err.response?.data ? JSON.stringify(err.response.data) : '');
         }
     }
 
