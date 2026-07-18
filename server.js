@@ -902,6 +902,28 @@ async function fetchMexcWithProxy(path) {
     throw new Error(`Todos los intentos de conexión fallaron. Último error: ${lastError.message}`);
 }
 
+function getAxiosConfigWithProxy(headers, timeout = 8000) {
+    const config = { headers, timeout };
+    const proxyUrlStr = process.env.STATIC_PROXY; // e.g. http://user:pass@host:port
+    if (proxyUrlStr) {
+        try {
+            const parsed = new URL(proxyUrlStr);
+            config.proxy = {
+                protocol: parsed.protocol.replace(':', ''),
+                host: parsed.hostname,
+                port: parseInt(parsed.port),
+                auth: parsed.username ? {
+                    username: decodeURIComponent(parsed.username),
+                    password: decodeURIComponent(parsed.password)
+                } : undefined
+            };
+        } catch (e) {
+            console.error('[ARBITRAJE] Error parsing STATIC_PROXY URL:', e.message);
+        }
+    }
+    return config;
+}
+
 async function checkWalletStatuses() {
     const now = Date.now();
     // Actualizar estados cada 5 minutos
@@ -922,10 +944,9 @@ async function checkWalletStatuses() {
             const signature = crypto.createHmac('sha256', bSec).update(queryString).digest('hex');
             
             // Usamos api-gcp.binance.com oficial para evitar geobloqueo
-            const res = await axios.get(`https://api-gcp.binance.com/sapi/v1/capital/config/getall?${queryString}&signature=${signature}`, {
-                headers: { 'X-MBX-APIKEY': bKey },
-                timeout: 8000
-            });
+            const url = `https://api-gcp.binance.com/sapi/v1/capital/config/getall?${queryString}&signature=${signature}`;
+            const config = getAxiosConfigWithProxy({ 'X-MBX-APIKEY': bKey }, 8000);
+            const res = await axios.get(url, config);
             
             const newCache = {};
             res.data.forEach(c => {
@@ -957,18 +978,14 @@ async function checkWalletStatuses() {
             
             // Intentar directo primero (seguro y rápido en Europa o local)
             try {
-                res = await axios.get(target, {
-                    headers: { 'X-MEXC-APIKEY': mKey },
-                    timeout: 8000
-                });
+                const config = getAxiosConfigWithProxy({ 'X-MEXC-APIKEY': mKey }, 8000);
+                res = await axios.get(target, config);
                 console.log('[ARBITRAJE] Estados de billeteras actualizados de MEXC (Directo).');
             } catch (directErr) {
                 console.warn('[ARBITRAJE] Conexión directa a MEXC falló para monederos, intentando vía proxy...');
                 const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
-                res = await axios.get(proxyUrl, {
-                    headers: { 'X-MEXC-APIKEY': mKey },
-                    timeout: 12000
-                });
+                const config = getAxiosConfigWithProxy({ 'X-MEXC-APIKEY': mKey }, 12000);
+                res = await axios.get(proxyUrl, config);
                 console.log('[ARBITRAJE] Estados de billeteras actualizados de MEXC (Proxy).');
             }
             
