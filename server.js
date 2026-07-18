@@ -853,8 +853,8 @@ let lastAlertedSymbols = {}; // symbol -> timestamp
 
 async function updateExchangeInfo() {
     try {
-        // Binance info
-        const binanceInfoRes = await axios.get('https://api.binance.com/api/v3/exchangeInfo');
+        // Binance info (usando endpoint alternativo oficial para datos públicos sin geo-bloqueo)
+        const binanceInfoRes = await axios.get('https://data-api.binance.vision/api/v3/exchangeInfo');
         activeBinance = {};
         binanceInfoRes.data.symbols.forEach(item => {
             if (item.symbol.endsWith('USDT') && item.status === 'TRADING') {
@@ -862,8 +862,9 @@ async function updateExchangeInfo() {
             }
         });
 
-        // MEXC info
-        const mexcInfoRes = await axios.get('https://api.mexc.com/api/v3/exchangeInfo');
+        // MEXC info (usando proxy allorigins para evadir bloqueo 451 en servidores de EEUU)
+        const mexcUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.mexc.com/api/v3/exchangeInfo');
+        const mexcInfoRes = await axios.get(mexcUrl);
         activeMexc = {};
         mexcInfoRes.data.symbols.forEach(item => {
             if (item.symbol.endsWith('USDT') && (item.status === '1' || item.status === 1)) {
@@ -884,7 +885,8 @@ async function runArbitrageScan() {
             await updateExchangeInfo();
         }
 
-        const binanceRes = await axios.get('https://api.binance.com/api/v3/ticker/price');
+        // Tickers de Binance
+        const binanceRes = await axios.get('https://data-api.binance.vision/api/v3/ticker/price');
         const binancePrices = {};
         binanceRes.data.forEach(item => {
             if (activeBinance[item.symbol]) {
@@ -892,7 +894,9 @@ async function runArbitrageScan() {
             }
         });
 
-        const mexcRes = await axios.get('https://api.mexc.com/api/v3/ticker/price');
+        // Tickers de MEXC vía proxy
+        const mexcUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.mexc.com/api/v3/ticker/price');
+        const mexcRes = await axios.get(mexcUrl);
         const mexcPrices = {};
         mexcRes.data.forEach(item => {
             if (activeMexc[item.symbol]) {
