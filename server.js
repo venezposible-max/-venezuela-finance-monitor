@@ -9,6 +9,7 @@ const path = require('path');
 const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
 const { NewMessage } = require('telegram/events');
+const crypto = require('crypto');
 
 // Agent para BCV (SSL sin verificación estricta)
 const insecureAgent = new https.Agent({ rejectUnauthorized: false });
@@ -845,11 +846,14 @@ app.post('/api/stop', (req, res) => {
 
 // ===== ARBITRAJE CRIPTO: BINANCE vs MEXC =====
 let activeBinance = {};
-let activeMexc = {};
 let lastExchangeInfoUpdate = 0;
 let lastArbitrageScan = null;
 let currentArbitrageResults = [];
 let lastAlertedSymbols = {}; // symbol -> timestamp
+
+let binanceWalletStatusCache = {};
+let mexcWalletStatusCache = {};
+let lastWalletStatusCheck = 0;
 
 // Helper para realizar peticiones GET a MEXC pasando por proxies públicos con failover automático
 async function fetchMexcWithProxy(path) {
@@ -876,6 +880,80 @@ async function fetchMexcWithProxy(path) {
     throw new Error(`Todos los proxies fallaron. Último error: ${lastError.message}`);
 }
 
+async function checkWalletStatuses() {
+    const now = Date.now();
+    // Actualizar estados cada 5 minutos
+    if (now - lastWalletStatusCheck < 5 * 60 * 1000 && Object.keys(binanceWalletStatusCache).length > 0) {
+        return;
+    }
+
+    const bKey = process.env.BINANCE_API_KEY;
+    const bSec = process.env.BINANCE_SECRET;
+    const mKey = process.env.MEXC_API_KEY;
+    const mSec = process.env.MEXC_SECRET;
+
+    // 1. Consultar Binance si tiene API Keys
+    if (bKey && bSec) {
+        try {
+            const timestamp = Date.now();
+            const queryString = `timestamp=${timestamp}`;
+            const signature = crypto.createHmac('sha256', bSec).update(queryString).digest('hex');
+            
+            // Usamos api-gcp.binance.com oficial para evitar geobloqueo
+            const res = await axios.get(`https://api-gcp.binance.com/sapi/v1/capital/config/getall?${queryString}&signature=${signature}`, {
+                headers: { 'X-MBX-APIKEY': bKey },
+                timeout: 8000
+            });
+            
+            const newCache = {};
+            res.data.forEach(c => {
+                const hasWithdraw = c.networkList.some(n => n.withdrawEnable);
+                const hasDeposit = c.networkList.some(n => n.depositEnable);
+                newCache[c.coin] = { withdrawEnable: hasWithdraw, depositEnable: hasDeposit };
+            });
+            binanceWalletStatusCache = newCache;
+            console.log('[ARBITRAJE] Estados de billeteras actualizados de Binance.');
+        } catch (err) {
+            console.error('[ARBITRAJE] Error consultando billeteras de Binance:', err.message);
+        }
+    }
+
+    // 2. Consultar MEXC si tiene API Keys
+    if (mKey && mSec) {
+        try {
+            const timestamp = Date.now();
+            const queryString = `timestamp=${timestamp}`;
+            const signature = crypto.createHmac('sha256', mSec).update(queryString).digest('hex');
+            
+            // Para MEXC, llamamos al endpoint privado vía proxy para evadir bloqueo 451 de Railway
+            const target = `https://api.mexc.com/api/v3/capital/config/getall?${queryString}&signature=${signature}`;
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+            
+            const res = await axios.get(proxyUrl, {
+                headers: { 'X-MEXC-APIKEY': mKey },
+                timeout: 10000
+            });
+            
+            const newCache = {};
+            // allorigins devuelve la respuesta en res.data, si es JSON
+            const dataList = res.data;
+            if (Array.isArray(dataList)) {
+                dataList.forEach(c => {
+                    const hasWithdraw = c.networkList.some(n => n.withdrawEnable);
+                    const hasDeposit = c.networkList.some(n => n.depositEnable);
+                    newCache[c.coin] = { withdrawEnable: hasWithdraw, depositEnable: hasDeposit };
+                });
+                mexcWalletStatusCache = newCache;
+                console.log('[ARBITRAJE] Estados de billeteras actualizados de MEXC.');
+            }
+        } catch (err) {
+            console.error('[ARBITRAJE] Error consultando billeteras de MEXC:', err.message);
+        }
+    }
+
+    lastWalletStatusCheck = now;
+}
+
 async function updateExchangeInfo() {
     try {
         // Binance info (usando endpoint alternativo oficial sin geo-bloqueo)
@@ -900,6 +978,9 @@ async function runArbitrageScan() {
             await updateExchangeInfo();
         }
 
+        // Consultar monederos si están las APIs configuradas
+        await checkWalletStatuses();
+
         // Tickers de Binance
         const binanceRes = await axios.get('https://data-api.binance.vision/api/v3/ticker/price');
         const binancePrices = {};
@@ -920,6 +1001,9 @@ async function runArbitrageScan() {
 
         const opportunities = [];
 
+        const hasBinanceKeys = !!(process.env.BINANCE_API_KEY && process.env.BINANCE_SECRET);
+        const hasMexcKeys = !!(process.env.MEXC_API_KEY && process.env.MEXC_SECRET);
+
         for (const symbol in binancePrices) {
             if (mexcPrices[symbol]) {
                 const pBinance = binancePrices[symbol];
@@ -934,13 +1018,37 @@ async function runArbitrageScan() {
                 const cheaper = pBinance < pMexc ? 'Binance' : 'MEXC';
                 const expensive = pBinance > pMexc ? 'Binance' : 'MEXC';
 
+                const baseSymbol = symbol.replace('USDT', '');
+                
+                // Resolver estado de billeteras
+                let buyWalletStatus = 'unknown'; // 'open' | 'closed' | 'unknown'
+                let sellWalletStatus = 'unknown';
+
+                if (cheaper === 'Binance') {
+                    if (hasBinanceKeys) {
+                        buyWalletStatus = binanceWalletStatusCache[baseSymbol]?.withdrawEnable ? 'open' : 'closed';
+                    }
+                    if (hasMexcKeys) {
+                        sellWalletStatus = mexcWalletStatusCache[baseSymbol]?.depositEnable ? 'open' : 'closed';
+                    }
+                } else {
+                    if (hasMexcKeys) {
+                        buyWalletStatus = mexcWalletStatusCache[baseSymbol]?.withdrawEnable ? 'open' : 'closed';
+                    }
+                    if (hasBinanceKeys) {
+                        sellWalletStatus = binanceWalletStatusCache[baseSymbol]?.depositEnable ? 'open' : 'closed';
+                    }
+                }
+
                 opportunities.push({
                     symbol,
                     pBinance,
                     pMexc,
                     percentage,
                     cheaper,
-                    expensive
+                    expensive,
+                    buyWalletStatus,
+                    sellWalletStatus
                 });
             }
         }

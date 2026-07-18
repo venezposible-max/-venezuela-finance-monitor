@@ -637,8 +637,20 @@
                 const spreadClass = isGiant ? 'spread-badge giant' : 'spread-badge';
                 const spreadTitle = isGiant ? 'Billetera cerrada o token diferente' : 'Operación normal';
                 
+                let walletBadge = '';
+                if (opp.buyWalletStatus === 'open' && opp.sellWalletStatus === 'open') {
+                    walletBadge = `<div style="font-size: 11px; color: var(--green); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;">🟢 Billeteras OK</div>`;
+                } else if (opp.buyWalletStatus === 'closed' || opp.sellWalletStatus === 'closed') {
+                    walletBadge = `<div style="font-size: 11px; color: var(--red); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;">🔴 Billetera Cerrada</div>`;
+                } else {
+                    walletBadge = `<div style="font-size: 11px; color: var(--subtext); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px;">⚪ Sin verificar API</div>`;
+                }
+
                 tr.innerHTML = `
-                    <td class="symbol-cell">${opp.symbol}</td>
+                    <td class="symbol-cell">
+                        ${opp.symbol}
+                        ${walletBadge}
+                    </td>
                     <td class="price-val">$${opp.pBinance.toFixed(opp.pBinance < 0.1 ? 6 : 4)}</td>
                     <td class="price-val">$${opp.pMexc.toFixed(opp.pMexc < 0.1 ? 6 : 4)}</td>
                     <td>
