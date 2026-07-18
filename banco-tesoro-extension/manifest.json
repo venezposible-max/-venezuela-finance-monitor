@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Monitor Intervención Banco del Tesoro",
+  "version": "1.0",
+  "description": "Revisa automáticamente si hay operaciones de intervención cambiaria en Banco del Tesoro.",
+  "permissions": [
+    "storage",
+    "notifications",
+    "offscreen",
+    "debugger"
+  ],
+  "host_permissions": [
+    "https://tesoroenlinea.bt.com.ve/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://tesoroenlinea.bt.com.ve/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}

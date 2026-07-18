@@ -843,6 +843,139 @@ app.post('/api/stop', (req, res) => {
     res.json({ success: true, state: monitorState });
 });
 
+// ===== ARBITRAJE CRIPTO: BINANCE vs MEXC =====
+let activeBinance = {};
+let activeMexc = {};
+let lastExchangeInfoUpdate = 0;
+let lastArbitrageScan = null;
+let currentArbitrageResults = [];
+let lastAlertedSymbols = {}; // symbol -> timestamp
+
+async function updateExchangeInfo() {
+    try {
+        // Binance info
+        const binanceInfoRes = await axios.get('https://api.binance.com/api/v3/exchangeInfo');
+        activeBinance = {};
+        binanceInfoRes.data.symbols.forEach(item => {
+            if (item.symbol.endsWith('USDT') && item.status === 'TRADING') {
+                activeBinance[item.symbol] = true;
+            }
+        });
+
+        // MEXC info
+        const mexcInfoRes = await axios.get('https://api.mexc.com/api/v3/exchangeInfo');
+        activeMexc = {};
+        mexcInfoRes.data.symbols.forEach(item => {
+            if (item.symbol.endsWith('USDT') && (item.status === '1' || item.status === 1)) {
+                activeMexc[item.symbol] = true;
+            }
+        });
+
+        lastExchangeInfoUpdate = Date.now();
+        console.log(`[ARBITRAJE] Info de mercado actualizada. Activos: Binance: ${Object.keys(activeBinance).length}, MEXC: ${Object.keys(activeMexc).length}`);
+    } catch (err) {
+        console.error('[ARBITRAJE] Error actualizando exchangeInfo:', err.message);
+    }
+}
+
+async function runArbitrageScan() {
+    try {
+        if (Date.now() - lastExchangeInfoUpdate > 2 * 60 * 60 * 1000 || Object.keys(activeBinance).length === 0) {
+            await updateExchangeInfo();
+        }
+
+        const binanceRes = await axios.get('https://api.binance.com/api/v3/ticker/price');
+        const binancePrices = {};
+        binanceRes.data.forEach(item => {
+            if (activeBinance[item.symbol]) {
+                binancePrices[item.symbol] = parseFloat(item.price);
+            }
+        });
+
+        const mexcRes = await axios.get('https://api.mexc.com/api/v3/ticker/price');
+        const mexcPrices = {};
+        mexcRes.data.forEach(item => {
+            if (activeMexc[item.symbol]) {
+                mexcPrices[item.symbol] = parseFloat(item.price);
+            }
+        });
+
+        const opportunities = [];
+
+        for (const symbol in binancePrices) {
+            if (mexcPrices[symbol]) {
+                const pBinance = binancePrices[symbol];
+                const pMexc = mexcPrices[symbol];
+
+                if (pBinance < 0.00001 || pMexc < 0.00001) continue;
+
+                const diff = Math.abs(pBinance - pMexc);
+                const minPrice = Math.min(pBinance, pMexc);
+                const percentage = (diff / minPrice) * 100;
+
+                const cheaper = pBinance < pMexc ? 'Binance' : 'MEXC';
+                const expensive = pBinance > pMexc ? 'Binance' : 'MEXC';
+
+                opportunities.push({
+                    symbol,
+                    pBinance,
+                    pMexc,
+                    percentage,
+                    cheaper,
+                    expensive
+                });
+            }
+        }
+
+        opportunities.sort((a, b) => b.percentage - a.percentage);
+
+        currentArbitrageResults = opportunities;
+        lastArbitrageScan = Date.now();
+
+        // Emitir vía WebSocket
+        io.emit('arbitrage_update', {
+            timestamp: lastArbitrageScan,
+            data: currentArbitrageResults
+        });
+
+        // Alerta de Telegram para discrepancias operables (entre 1.0% y 15.0%)
+        const alertable = opportunities.find(o => o.percentage >= 1.0 && o.percentage <= 15.0);
+        if (alertable) {
+            const now = Date.now();
+            const lastAlert = lastAlertedSymbols[alertable.symbol] || 0;
+            if (now - lastAlert > 30 * 60 * 1000) { // límite de 1 alerta por moneda cada 30 min
+                lastAlertedSymbols[alertable.symbol] = now;
+                
+                const emoji = alertable.percentage >= 3.0 ? '🚨🔥' : '📈';
+                const message = `${emoji} <b>OPORTUNIDAD DE ARBITRAJE CRIPTO</b> ${emoji}\n\n` +
+                                `<b>Par:</b> <code>${alertable.symbol}</code>\n` +
+                                `<b>Diferencia:</b> <code>${alertable.percentage.toFixed(2)}%</code>\n\n` +
+                                `🛒 <b>Comprar en:</b> ${alertable.cheaper} ($${(alertable.cheaper === 'Binance' ? alertable.pBinance : alertable.pMexc).toFixed(5)})\n` +
+                                `💰 <b>Vender en:</b> ${alertable.expensive} ($${(alertable.expensive === 'Binance' ? alertable.pBinance : alertable.pMexc).toFixed(5)})\n\n` +
+                                `<i>Valida que el monedero de retiros esté activo en ambos exchanges antes de operar.</i>`;
+                
+                sendTelegramAlert(message);
+            }
+        }
+
+    } catch (err) {
+        console.error('[ARBITRAJE] Error en el escaneo de arbitraje:', err.message);
+    }
+}
+
+// Endpoints para Arbitraje
+app.get('/api/arbitrage/live', (req, res) => {
+    res.json({
+        lastUpdate: lastArbitrageScan,
+        data: currentArbitrageResults
+    });
+});
+
+app.post('/api/arbitrage/scan', async (req, res) => {
+    await runArbitrageScan();
+    res.json({ success: true, lastUpdate: lastArbitrageScan, data: currentArbitrageResults });
+});
+
 // ===== USERBOT: ESPEJO EN TIEMPO REAL =====
 let userBotClient = null;
 
@@ -972,6 +1105,11 @@ server.listen(PORT, () => {
     }, 60000);
     checkLiquidity(); // Ejecución inicial
     checkBankStatus(); // Ejecución inicial
+
+    // Iniciar escáner de arbitraje cripto cada 30 segundos
+    console.log('[ARBITRAJE] Activando escáner de arbitraje cripto (30s)...');
+    setInterval(runArbitrageScan, 30000);
+    runArbitrageScan(); // Ejecución inicial
 
     // Iniciar UserBot para espejo en tiempo real con un delay de 15 segundos
     // Esto evita AUTH_KEY_DUPLICATED durante los despliegues progresivos (Rolling deploys) de Railway

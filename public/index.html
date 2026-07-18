@@ -106,9 +106,16 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>MONITOR ARBITRAJE</h1>
-            <div id="status-badge" class="status-badge status-stopped">SISTEMA APAGADO</div>
+        <header style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 10px; margin-bottom: 30px;">
+            <div style="display: flex; flex-direction: column;">
+                <h1 style="margin: 0;">MONITOR ARBITRAJE</h1>
+                <div id="status-badge" class="status-badge status-stopped" style="margin-top: 6px; width: fit-content; display: inline-block;">SISTEMA APAGADO</div>
+            </div>
+            <div>
+                <a href="/arbitrage.html" style="background: linear-gradient(135deg, var(--accent), #7c3aed); color: #fff; padding: 12px 20px; border-radius: 14px; font-size: 13px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(88,101,242,0.3); transition: 0.2s; border: none; cursor: pointer;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                    ⚡ Arbitraje Cripto (Binance vs MEXC)
+                </a>
+            </div>
         </header>
 
         <div class="controls">

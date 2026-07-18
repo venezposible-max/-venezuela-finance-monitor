@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor Mercantil</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h2>🛡️ Monitor Mercantil</h2>
+            <p class="desc">Buscador automático de Intervención</p>
+        </header>
+
+        <div class="card status-card">
+            <div class="status-row">
+                <span class="label">Estado:</span>
+                <span id="status-badge" class="badge badge-inactive">DESACTIVADO</span>
+            </div>
+            <div class="status-row">
+                <span class="label">Último chequeo:</span>
+                <span id="last-check">Nunca</span>
+            </div>
+        </div>
+
+        <div class="card settings-card">
+            <div class="input-group">
+                <label for="interval-select">Intervalo de Chequeo:</label>
+                <select id="interval-select">
+                    <option value="15000">15 Segundos</option>
+                    <option value="30000" selected>30 Segundos</option>
+                    <option value="60000">1 Minuto</option>
+                    <option value="180000">3 Minutos</option>
+                    <option value="300000">5 Minutos</option>
+                </select>
+            </div>
+            <div class="input-group" id="monto-container" style="margin-top: 6px;">
+                <label for="monto-input">Monto a Comprar (USD):</label>
+                <input type="number" id="monto-input" value="100" min="1" step="1" style="width:100%; padding:8px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:8px; color:#fff; font-size:13px; font-weight:600; box-sizing:border-box; outline:none; cursor:text;">
+            </div>
+            <button id="toggle-btn" class="btn btn-start" style="margin-top: 8px;">INICIAR MONITOREO</button>
+            <button id="test-alarm-btn" class="btn-secondary">🔊 Probar Alarma</button>
+        </div>
+
+        <div class="card log-card">
+            <h3>Terminal de Actividad</h3>
+            <div id="log-list" class="log-list">
+                <div class="log-line">Esperando inicio...</div>
+            </div>
+        </div>
+
+        <footer>
+            <span>Monitor Mercantil Autoclicker v1.0</span>
+        </footer>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
