@@ -859,8 +859,9 @@ let lastWalletStatusCheck = 0;
 async function fetchMexcWithProxy(path) {
     const targetUrl = `https://api.mexc.com${path}`;
     const proxies = [
-        url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+        url => url, // 1. Intento directo (Ideal si el servidor está en Europa o Local)
+        url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, // 2. Proxy A
+        url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` // 3. Proxy B
     ];
 
     let lastError = null;
@@ -873,11 +874,11 @@ async function fetchMexcWithProxy(path) {
                 return res.data;
             }
         } catch (err) {
-            console.warn(`[ARBITRAJE] Proxy ${i + 1} falló para ${path}: ${err.message}`);
+            console.warn(`[ARBITRAJE] Conexión ${i === 0 ? 'directa' : 'Proxy ' + i} falló para ${path}: ${err.message}`);
             lastError = err;
         }
     }
-    throw new Error(`Todos los proxies fallaron. Último error: ${lastError.message}`);
+    throw new Error(`Todos los intentos de conexión fallaron. Último error: ${lastError.message}`);
 }
 
 async function checkWalletStatuses() {
@@ -925,17 +926,27 @@ async function checkWalletStatuses() {
             const queryString = `timestamp=${timestamp}`;
             const signature = crypto.createHmac('sha256', mSec).update(queryString).digest('hex');
             
-            // Para MEXC, llamamos al endpoint privado vía proxy para evadir bloqueo 451 de Railway
             const target = `https://api.mexc.com/api/v3/capital/config/getall?${queryString}&signature=${signature}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+            let res;
             
-            const res = await axios.get(proxyUrl, {
-                headers: { 'X-MEXC-APIKEY': mKey },
-                timeout: 10000
-            });
+            // Intentar directo primero (seguro y rápido en Europa o local)
+            try {
+                res = await axios.get(target, {
+                    headers: { 'X-MEXC-APIKEY': mKey },
+                    timeout: 8000
+                });
+                console.log('[ARBITRAJE] Estados de billeteras actualizados de MEXC (Directo).');
+            } catch (directErr) {
+                console.warn('[ARBITRAJE] Conexión directa a MEXC falló para monederos, intentando vía proxy...');
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+                res = await axios.get(proxyUrl, {
+                    headers: { 'X-MEXC-APIKEY': mKey },
+                    timeout: 12000
+                });
+                console.log('[ARBITRAJE] Estados de billeteras actualizados de MEXC (Proxy).');
+            }
             
             const newCache = {};
-            // allorigins devuelve la respuesta en res.data, si es JSON
             const dataList = res.data;
             if (Array.isArray(dataList)) {
                 dataList.forEach(c => {
