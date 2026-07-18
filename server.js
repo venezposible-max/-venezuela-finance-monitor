@@ -851,9 +851,35 @@ let lastArbitrageScan = null;
 let currentArbitrageResults = [];
 let lastAlertedSymbols = {}; // symbol -> timestamp
 
+// Helper para realizar peticiones GET a MEXC pasando por proxies públicos con failover automático
+async function fetchMexcWithProxy(path) {
+    const targetUrl = `https://api.mexc.com${path}`;
+    const proxies = [
+        url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+        url => `https://thingproxy.freeboard.io/fetch/${url}`
+    ];
+
+    let lastError = null;
+    for (let i = 0; i < proxies.length; i++) {
+        try {
+            const proxyUrl = proxies[i](targetUrl);
+            // Timeout de 8 segundos por intento
+            const res = await axios.get(proxyUrl, { timeout: 8000 });
+            if (res.data) {
+                return res.data;
+            }
+        } catch (err) {
+            console.warn(`[ARBITRAJE] Proxy ${i + 1} falló para ${path}: ${err.message}`);
+            lastError = err;
+        }
+    }
+    throw new Error(`Todos los proxies fallaron. Último error: ${lastError.message}`);
+}
+
 async function updateExchangeInfo() {
     try {
-        // Binance info (usando endpoint alternativo oficial para datos públicos sin geo-bloqueo)
+        // Binance info (usando endpoint alternativo oficial sin geo-bloqueo)
         const binanceInfoRes = await axios.get('https://data-api.binance.vision/api/v3/exchangeInfo');
         activeBinance = {};
         binanceInfoRes.data.symbols.forEach(item => {
@@ -862,11 +888,10 @@ async function updateExchangeInfo() {
             }
         });
 
-        // MEXC info (usando proxy allorigins para evadir bloqueo 451 en servidores de EEUU)
-        const mexcUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.mexc.com/api/v3/exchangeInfo');
-        const mexcInfoRes = await axios.get(mexcUrl);
+        // MEXC info con failover de proxies
+        const mexcData = await fetchMexcWithProxy('/api/v3/exchangeInfo');
         activeMexc = {};
-        mexcInfoRes.data.symbols.forEach(item => {
+        mexcData.symbols.forEach(item => {
             if (item.symbol.endsWith('USDT') && (item.status === '1' || item.status === 1)) {
                 activeMexc[item.symbol] = true;
             }
@@ -894,11 +919,10 @@ async function runArbitrageScan() {
             }
         });
 
-        // Tickers de MEXC vía proxy
-        const mexcUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.mexc.com/api/v3/ticker/price');
-        const mexcRes = await axios.get(mexcUrl);
+        // Tickers de MEXC con failover de proxies
+        const mexcData = await fetchMexcWithProxy('/api/v3/ticker/price');
         const mexcPrices = {};
-        mexcRes.data.forEach(item => {
+        mexcData.forEach(item => {
             if (activeMexc[item.symbol]) {
                 mexcPrices[item.symbol] = parseFloat(item.price);
             }
