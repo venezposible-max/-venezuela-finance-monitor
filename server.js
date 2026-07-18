@@ -929,11 +929,14 @@ async function checkWalletStatuses() {
             
             const newCache = {};
             res.data.forEach(c => {
-                newCache[c.coin] = c.networkList.map(n => ({
-                    network: n.network,
-                    withdrawEnable: n.withdrawEnable,
-                    depositEnable: n.depositEnable
-                }));
+                newCache[c.coin] = {
+                    name: c.name || '',
+                    networks: c.networkList.map(n => ({
+                        network: n.network,
+                        withdrawEnable: n.withdrawEnable,
+                        depositEnable: n.depositEnable
+                    }))
+                };
             });
             binanceWalletStatusCache = newCache;
             console.log('[ARBITRAJE] Estados de billeteras actualizados de Binance.');
@@ -973,11 +976,14 @@ async function checkWalletStatuses() {
             const dataList = res.data;
             if (Array.isArray(dataList)) {
                 dataList.forEach(c => {
-                    newCache[c.coin] = c.networkList.map(n => ({
-                        network: n.network,
-                        withdrawEnable: n.withdrawEnable,
-                        depositEnable: n.depositEnable
-                    }));
+                    newCache[c.coin] = {
+                        name: c.name || '',
+                        networks: c.networkList.map(n => ({
+                            network: n.network,
+                            withdrawEnable: n.withdrawEnable,
+                            depositEnable: n.depositEnable
+                        }))
+                    };
                 });
                 mexcWalletStatusCache = newCache;
                 console.log('[ARBITRAJE] Estados de billeteras actualizados de MEXC.');
@@ -1061,52 +1067,71 @@ async function runArbitrageScan() {
                 let mexcWalletStatus = 'unknown';
 
                 if (hasBinanceKeys && hasMexcKeys) {
-                    const bNetworks = binanceWalletStatusCache[baseSymbol] || [];
-                    const mNetworks = mexcWalletStatusCache[baseSymbol] || [];
+                    const bCache = binanceWalletStatusCache[baseSymbol];
+                    const mCache = mexcWalletStatusCache[baseSymbol];
 
-                    let commonNetworkFound = false;
+                    // 1. Verificar Colisión de Símbolo (Ej: "Sleepless AI" de Binance vs "Gensyn" de MEXC)
+                    let namesMatch = true;
+                    if (bCache && mCache && bCache.name && mCache.name) {
+                        const n1 = bCache.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const n2 = mCache.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        
+                        // Deben ser iguales o contenerse entre sí (ej: "tether" y "tetherus")
+                        // O al menos compartir los primeros 4 caracteres (ej: "teth" y "teth")
+                        namesMatch = n1.includes(n2) || n2.includes(n1) || (n1.substring(0, 4) === n2.substring(0, 4));
+                    }
 
-                    for (const bn of bNetworks) {
-                        const bNorm = normalizeNetwork(bn.network);
-                        for (const mn of mNetworks) {
-                            const mNorm = normalizeNetwork(mn.network);
+                    if (!namesMatch) {
+                        // Nombres incompatibles detected!
+                        binanceWalletStatus = 'closed';
+                        mexcWalletStatus = 'closed';
+                    } else {
+                        // 2. Verificar redes compatibles si los nombres coinciden
+                        const bNetworks = bCache ? bCache.networks : [];
+                        const mNetworks = mCache ? mCache.networks : [];
+                        let commonNetworkFound = false;
 
-                            if (bNorm === mNorm && bNorm !== '') {
-                                if (cheaper === 'Binance') {
-                                    if (bn.withdrawEnable && mn.depositEnable) {
-                                        commonNetworkFound = true;
-                                        break;
-                                    }
-                                } else {
-                                    if (mn.withdrawEnable && bn.depositEnable) {
-                                        commonNetworkFound = true;
-                                        break;
+                        for (const bn of bNetworks) {
+                            const bNorm = normalizeNetwork(bn.network);
+                            for (const mn of mNetworks) {
+                                const mNorm = normalizeNetwork(mn.network);
+
+                                if (bNorm === mNorm && bNorm !== '') {
+                                    if (cheaper === 'Binance') {
+                                        if (bn.withdrawEnable && mn.depositEnable) {
+                                            commonNetworkFound = true;
+                                            break;
+                                        }
+                                    } else {
+                                        if (mn.withdrawEnable && bn.depositEnable) {
+                                            commonNetworkFound = true;
+                                            break;
+                                        }
                                     }
                                 }
                             }
+                            if (commonNetworkFound) break;
                         }
-                        if (commonNetworkFound) break;
-                    }
 
-                    if (commonNetworkFound) {
-                        binanceWalletStatus = 'open';
-                        mexcWalletStatus = 'open';
-                    } else {
-                        // Si no hay red compatible abierta, marcamos la billetera correspondiente como suspendida
-                        binanceWalletStatus = 'closed';
-                        mexcWalletStatus = 'closed';
+                        if (commonNetworkFound) {
+                            binanceWalletStatus = 'open';
+                            mexcWalletStatus = 'open';
+                        } else {
+                            binanceWalletStatus = 'closed';
+                            mexcWalletStatus = 'closed';
+                        }
                     }
                 } else {
                     // Fallback si falta alguna API key (solo chequeo individual simple)
                     if (hasBinanceKeys) {
-                        const cache = binanceWalletStatusCache[baseSymbol] || [];
+                        const cache = binanceWalletStatusCache[baseSymbol] ? binanceWalletStatusCache[baseSymbol].networks : [];
                         const needed = cheaper === 'Binance' 
                             ? cache.some(n => n.withdrawEnable) 
                             : cache.some(n => n.depositEnable);
                         binanceWalletStatus = needed ? 'open' : 'closed';
                     }
                     if (hasMexcKeys) {
-                        const cache = mexcWalletStatusCache[baseSymbol] || [];
+                        const cache = mexcWalletStatusCache[baseSymbol] ? mexcWalletStatusCache[baseSymbol].networks : [];
                         const needed = cheaper === 'MEXC' 
                             ? cache.some(n => n.withdrawEnable) 
                             : cache.some(n => n.depositEnable);
