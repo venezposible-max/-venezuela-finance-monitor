@@ -1075,7 +1075,8 @@ async function runArbitrageScan() {
             data: currentArbitrageResults
         });
 
-        // Alerta de Telegram para discrepancias operables (entre 1.0% y 15.0%)
+        // Alerta de Telegram desactivada a solicitud del usuario (se maneja solo en la app web)
+        /*
         const alertable = opportunities.find(o => o.percentage >= 1.0 && o.percentage <= 15.0);
         if (alertable) {
             const now = Date.now();
@@ -1094,6 +1095,7 @@ async function runArbitrageScan() {
                 sendTelegramAlert(message);
             }
         }
+        */
 
     } catch (err) {
         console.error('[ARBITRAJE] Error en el escaneo de arbitraje:', err.message);
