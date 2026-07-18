@@ -637,22 +637,37 @@
                 const spreadClass = isGiant ? 'spread-badge giant' : 'spread-badge';
                 const spreadTitle = isGiant ? 'Billetera cerrada o token diferente' : 'Operación normal';
                 
-                let walletBadge = '';
-                if (opp.buyWalletStatus === 'open' && opp.sellWalletStatus === 'open') {
-                    walletBadge = `<div style="font-size: 11px; color: var(--green); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;">🟢 Billeteras OK</div>`;
-                } else if (opp.buyWalletStatus === 'closed' || opp.sellWalletStatus === 'closed') {
-                    walletBadge = `<div style="font-size: 11px; color: var(--red); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;">🔴 Billetera Cerrada</div>`;
+                const bAction = opp.cheaper === 'Binance' ? 'Retiro' : 'Depósito';
+                const mAction = opp.cheaper === 'MEXC' ? 'Retiro' : 'Depósito';
+
+                let bBadge = '';
+                if (opp.binanceWalletStatus === 'open') {
+                    bBadge = `<div style="font-size: 10px; color: var(--green); font-weight: 700; margin-top: 4px;">🟢 ${bAction} OK</div>`;
+                } else if (opp.binanceWalletStatus === 'closed') {
+                    bBadge = `<div style="font-size: 10px; color: var(--red); font-weight: 700; margin-top: 4px;">🔴 ${bAction} Susp.</div>`;
                 } else {
-                    walletBadge = `<div style="font-size: 11px; color: var(--subtext); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px;">⚪ Sin verificar API</div>`;
+                    bBadge = `<div style="font-size: 10px; color: var(--subtext); font-weight: 600; margin-top: 4px;">⚪ Sin verificar</div>`;
+                }
+
+                let mBadge = '';
+                if (opp.mexcWalletStatus === 'open') {
+                    mBadge = `<div style="font-size: 10px; color: var(--green); font-weight: 700; margin-top: 4px;">🟢 ${mAction} OK</div>`;
+                } else if (opp.mexcWalletStatus === 'closed') {
+                    mBadge = `<div style="font-size: 10px; color: var(--red); font-weight: 700; margin-top: 4px;">🔴 ${mAction} Susp.</div>`;
+                } else {
+                    mBadge = `<div style="font-size: 10px; color: var(--subtext); font-weight: 600; margin-top: 4px;">⚪ Sin verificar</div>`;
                 }
 
                 tr.innerHTML = `
-                    <td class="symbol-cell">
-                        ${opp.symbol}
-                        ${walletBadge}
+                    <td class="symbol-cell">${opp.symbol}</td>
+                    <td class="price-val">
+                        $${opp.pBinance.toFixed(opp.pBinance < 0.1 ? 6 : 4)}
+                        ${bBadge}
                     </td>
-                    <td class="price-val">$${opp.pBinance.toFixed(opp.pBinance < 0.1 ? 6 : 4)}</td>
-                    <td class="price-val">$${opp.pMexc.toFixed(opp.pMexc < 0.1 ? 6 : 4)}</td>
+                    <td class="price-val">
+                        $${opp.pMexc.toFixed(opp.pMexc < 0.1 ? 6 : 4)}
+                        ${mBadge}
+                    </td>
                     <td>
                         <span class="${spreadClass}" title="${spreadTitle}">
                             ${opp.percentage.toFixed(2)}%

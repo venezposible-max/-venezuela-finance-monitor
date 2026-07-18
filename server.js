@@ -1031,23 +1031,22 @@ async function runArbitrageScan() {
 
                 const baseSymbol = symbol.replace('USDT', '');
                 
-                // Resolver estado de billeteras
-                let buyWalletStatus = 'unknown'; // 'open' | 'closed' | 'unknown'
-                let sellWalletStatus = 'unknown';
+                // Resolver estado específico por exchange para mostrarlo abajo del precio
+                let binanceWalletStatus = 'unknown';
+                let mexcWalletStatus = 'unknown';
 
-                if (cheaper === 'Binance') {
-                    if (hasBinanceKeys) {
-                        buyWalletStatus = binanceWalletStatusCache[baseSymbol]?.withdrawEnable ? 'open' : 'closed';
+                if (hasBinanceKeys) {
+                    const cache = binanceWalletStatusCache[baseSymbol];
+                    if (cache) {
+                        const needed = cheaper === 'Binance' ? cache.withdrawEnable : cache.depositEnable;
+                        binanceWalletStatus = needed ? 'open' : 'closed';
                     }
-                    if (hasMexcKeys) {
-                        sellWalletStatus = mexcWalletStatusCache[baseSymbol]?.depositEnable ? 'open' : 'closed';
-                    }
-                } else {
-                    if (hasMexcKeys) {
-                        buyWalletStatus = mexcWalletStatusCache[baseSymbol]?.withdrawEnable ? 'open' : 'closed';
-                    }
-                    if (hasBinanceKeys) {
-                        sellWalletStatus = binanceWalletStatusCache[baseSymbol]?.depositEnable ? 'open' : 'closed';
+                }
+                if (hasMexcKeys) {
+                    const cache = mexcWalletStatusCache[baseSymbol];
+                    if (cache) {
+                        const needed = cheaper === 'MEXC' ? cache.withdrawEnable : cache.depositEnable;
+                        mexcWalletStatus = needed ? 'open' : 'closed';
                     }
                 }
 
@@ -1058,8 +1057,8 @@ async function runArbitrageScan() {
                     percentage,
                     cheaper,
                     expensive,
-                    buyWalletStatus,
-                    sellWalletStatus
+                    binanceWalletStatus,
+                    mexcWalletStatus
                 });
             }
         }
