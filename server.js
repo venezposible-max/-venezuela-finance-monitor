@@ -856,16 +856,15 @@ async function fetchMexcWithProxy(path) {
     const targetUrl = `https://api.mexc.com${path}`;
     const proxies = [
         url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-        url => `https://thingproxy.freeboard.io/fetch/${url}`
+        url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
     ];
 
     let lastError = null;
     for (let i = 0; i < proxies.length; i++) {
         try {
             const proxyUrl = proxies[i](targetUrl);
-            // Timeout de 8 segundos por intento
-            const res = await axios.get(proxyUrl, { timeout: 8000 });
+            // Timeout de 6 segundos por intento (suficiente para payloads pequeños como tickers)
+            const res = await axios.get(proxyUrl, { timeout: 6000 });
             if (res.data) {
                 return res.data;
             }
@@ -888,17 +887,8 @@ async function updateExchangeInfo() {
             }
         });
 
-        // MEXC info con failover de proxies
-        const mexcData = await fetchMexcWithProxy('/api/v3/exchangeInfo');
-        activeMexc = {};
-        mexcData.symbols.forEach(item => {
-            if (item.symbol.endsWith('USDT') && (item.status === '1' || item.status === 1)) {
-                activeMexc[item.symbol] = true;
-            }
-        });
-
         lastExchangeInfoUpdate = Date.now();
-        console.log(`[ARBITRAJE] Info de mercado actualizada. Activos: Binance: ${Object.keys(activeBinance).length}, MEXC: ${Object.keys(activeMexc).length}`);
+        console.log(`[ARBITRAJE] Info de mercado actualizada (Binance). Activos: ${Object.keys(activeBinance).length}`);
     } catch (err) {
         console.error('[ARBITRAJE] Error actualizando exchangeInfo:', err.message);
     }
@@ -923,7 +913,7 @@ async function runArbitrageScan() {
         const mexcData = await fetchMexcWithProxy('/api/v3/ticker/price');
         const mexcPrices = {};
         mexcData.forEach(item => {
-            if (activeMexc[item.symbol]) {
+            if (item.symbol.endsWith('USDT')) {
                 mexcPrices[item.symbol] = parseFloat(item.price);
             }
         });
