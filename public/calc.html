@@ -273,6 +273,164 @@
             color: var(--red);
         }
 
+        /* Historial de Registros */
+        .btn-action-container {
+            margin-bottom: 25px;
+        }
+        .add-record-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.2);
+        }
+        .add-record-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4);
+        }
+        .add-record-btn:active {
+            transform: scale(0.98);
+        }
+
+        .history-section {
+            background: var(--card-sub);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-top: 25px;
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .history-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #fff;
+        }
+        .clear-btn {
+            background: transparent;
+            border: none;
+            color: var(--red);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: opacity 0.2s;
+        }
+        .clear-btn:hover {
+            opacity: 0.8;
+        }
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+        /* Custom Scrollbar for history list */
+        .history-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .history-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        .history-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            transition: transform 0.2s ease;
+        }
+        .history-item:hover {
+            transform: scale(1.01);
+            border-color: rgba(255,255,255,0.1);
+        }
+        .history-item .details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .history-item .meta {
+            font-size: 10px;
+            color: var(--subtext);
+        }
+        .history-item .rates {
+            font-size: 11px;
+            color: var(--subtext);
+        }
+        .history-item .stats {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            align-items: flex-end;
+        }
+        .history-item .stats .values {
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .history-item .stats .profit {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--green);
+        }
+        .history-item .stats .profit.loss {
+            color: var(--red);
+        }
+        .delete-item-btn {
+            background: transparent;
+            border: none;
+            color: var(--subtext);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 6px;
+            margin-left: 10px;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .delete-item-btn:hover {
+            color: var(--red);
+        }
+        .empty-history {
+            text-align: center;
+            color: var(--subtext);
+            font-size: 12px;
+            padding: 20px 0;
+            font-style: italic;
+        }
+    </style>
+
         .footer {
             text-align: center;
             font-size: 12px;
@@ -383,8 +541,28 @@
             </div>
         </div>
 
+        <!-- Botón de guardar registro -->
+        <div class="btn-action-container">
+            <button class="add-record-btn" onclick="addRecord()">
+                💾 AGREGAR REGISTRO
+            </button>
+        </div>
+
+        <!-- Módulo de Historial -->
+        <div class="history-section">
+            <div class="history-header">
+                <span class="history-title">📋 Historial de Operaciones</span>
+                <button class="clear-btn" onclick="clearHistory()">
+                    🗑️ Borrar Historial
+                </button>
+            </div>
+            <div id="history-list" class="history-list">
+                <!-- Se rellena dinámicamente -->
+            </div>
+        </div>
+
         <div class="footer">
-            Monitoreado por Venezuela-Finance · <a href="/index.html">Volver al Monitor</a>
+            Monitoreado por Venezuela-Finance
         </div>
     </div>
 
@@ -446,6 +624,16 @@
             const gananciaUsdt = usdtRetornado - startUsdt;
             const roi = (gananciaUsdt / startUsdt) * 100;
 
+            // Guardar cálculo actual para el historial
+            currentCalc = {
+                start: startUsdt,
+                end: usdtRetornado,
+                profit: gananciaUsdt,
+                roi: roi,
+                tBinance: tasaBinance,
+                tBcv: tasaBcv
+            };
+
             // Formateadores
             const fmtVes = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const fmtUsd = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -481,8 +669,87 @@
             document.getElementById('res-usdt-retornado').innerText = fmtUsd(usdtRetornado) + ' USDT';
         }
 
-        // Ejecutar primer cálculo al cargar la página
-        setTimeout(calculate, 500);
+        // --- SISTEMA DE REGISTRO / HISTORIAL ---
+        let currentCalc = null;
+
+        function renderHistory() {
+            const listEl = document.getElementById('history-list');
+            const history = JSON.parse(localStorage.getItem('bdt_history') || '[]');
+            
+            if (history.length === 0) {
+                listEl.innerHTML = '<div class="empty-history">No hay operaciones registradas aún.</div>';
+                return;
+            }
+
+            const fmt = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            listEl.innerHTML = history.map(item => {
+                const profitClass = item.profit >= 0 ? 'profit' : 'profit loss';
+                const sign = item.profit >= 0 ? '+' : '';
+                return `
+                    <div class="history-item">
+                        <div class="details">
+                            <span class="meta">📅 ${item.date}</span>
+                            <span class="rates">Binance: <b>${item.tBinance.toFixed(2)}</b> | BCV: <b>${item.tBcv.toFixed(2)}</b></span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div class="stats">
+                                <span class="values">${fmt(item.start)} ➡️ ${fmt(item.end)} USDT</span>
+                                <span class="${profitClass}">${sign}${fmt(item.profit)} USDT (${sign}${item.roi.toFixed(2)}%)</span>
+                            </div>
+                            <button class="delete-item-btn" onclick="deleteRecord(${item.id})" title="Borrar registro">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addRecord() {
+            if (!currentCalc || currentCalc.start === 0) return;
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' }) + ' ' + 
+                            now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+            const record = {
+                id: Date.now(),
+                date: dateStr,
+                start: currentCalc.start,
+                end: currentCalc.end,
+                profit: currentCalc.profit,
+                roi: currentCalc.roi,
+                tBinance: currentCalc.tBinance,
+                tBcv: currentCalc.tBcv
+            };
+
+            const history = JSON.parse(localStorage.getItem('bdt_history') || '[]');
+            history.unshift(record);
+            localStorage.setItem('bdt_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function deleteRecord(id) {
+            let history = JSON.parse(localStorage.getItem('bdt_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('bdt_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        // Borrar todo el historial
+        function clearHistory() {
+            if (confirm('¿Estás seguro de que deseas borrar todo el historial de operaciones?')) {
+                localStorage.removeItem('bdt_history');
+                renderHistory();
+            }
+        }
+
+        // Inicializar
+        setTimeout(() => {
+            calculate();
+            renderHistory();
+        }, 500);
     </script>
 </body>
 </html>
