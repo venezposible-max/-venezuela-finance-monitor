@@ -3,270 +3,463 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Arbitraje</title>
+    <title>Calculadora de Arbitraje BDT-Binance</title>
     <meta name="apple-mobile-web-app-title" content="Calc Arbitraje">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/icon.png">
     <link rel="icon" type="image/png" href="/icon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
-            --bg: #0a0b10;
-            --card: #15171f;
+            --bg: #07080e;
+            --card: #11131c;
+            --card-sub: #181b28;
             --accent: #5865f2;
-            --green: #43b581;
-            --red: #f04747;
+            --accent-glow: rgba(88, 101, 242, 0.15);
+            --green: #10b981;
+            --green-glow: rgba(16, 185, 129, 0.15);
+            --red: #ef4444;
             --text: #ffffff;
-            --subtext: #8e9297;
+            --subtext: #9ca3af;
+            --border: rgba(255, 255, 255, 0.06);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
-        body { background: var(--bg); color: var(--text); padding: 30px 20px; min-height: 100vh; }
-        .container { max-width: 500px; margin: 0 auto; }
-
-        header { text-align: center; margin-bottom: 30px; }
-        h1 { font-size: 22px; font-weight: 700; background: linear-gradient(90deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
-        .subtitle { font-size: 13px; color: var(--subtext); }
-
-        .rates-bar { display: flex; gap: 10px; margin-bottom: 25px; }
-        .rate-chip { flex: 1; background: var(--card); padding: 12px; border-radius: 14px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-        .rate-chip .label { font-size: 10px; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .rate-chip .val { font-size: 18px; font-weight: 700; }
-        .rate-chip .val.green { color: var(--green); }
-
-        .calc-box { background: var(--card); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); }
-        .calc-inputs { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
-        .calc-inputs select, .calc-inputs input { 
-            flex: 1; min-width: 120px; padding: 14px 16px; border-radius: 14px; 
-            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); 
-            color: #fff; font-size: 16px; font-family: inherit; font-weight: 600; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
         }
-        .calc-inputs select:focus, .calc-inputs input:focus { outline: none; border-color: var(--accent); }
-        .calc-inputs select option { background: #1a1c25; color: #fff; }
 
-        .calc-btn { 
-            width: 100%; padding: 16px; border-radius: 16px; 
-            background: linear-gradient(135deg, var(--accent), #7c3aed); 
-            border: none; color: #fff; font-size: 16px; font-weight: 700; 
-            cursor: pointer; transition: 0.3s; letter-spacing: 0.5px; 
+        body {
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .calc-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4); }
-        .calc-btn:active { transform: scale(0.98); }
 
-        .calc-results { display: none; margin-top: 22px; }
-        .calc-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
-        .calc-row:last-child { border: none; }
-        .calc-row .label { color: var(--subtext); }
-        .calc-row .val { font-weight: 700; }
-        .calc-row .val.profit { color: var(--green); font-size: 20px; }
-        .calc-row .val.loss { color: var(--red); font-size: 20px; }
-        .calc-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); margin: 12px 0; }
+        .container {
+            width: 100%;
+            max-width: 540px;
+            background: var(--card);
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            padding: 30px 25px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
 
-        .footer { text-align: center; margin-top: 25px; font-size: 12px; color: var(--subtext); }
-        .footer a { color: var(--accent); text-decoration: none; }
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
 
-        .pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--subtext);
+        }
+
+        /* Tasas en vivo */
+        .live-rates {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .rate-card {
+            flex: 1;
+            background: var(--card-sub);
+            border-radius: 16px;
+            padding: 12px 10px;
+            text-align: center;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .rate-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .rate-card .label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--subtext);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .rate-card .value {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        /* Formulario de entradas */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--subtext);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            color: var(--subtext);
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            background: var(--card-sub);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 16px 16px 38px;
+            color: var(--text);
+            font-size: 18px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .inputs-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .inputs-row .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        /* Resultados destacados */
+        .result-highlight {
+            background: var(--green-glow);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-highlight::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .result-highlight .title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--green);
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .result-highlight .amount {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .result-highlight .sub {
+            font-size: 12px;
+            color: var(--subtext);
+            margin-top: 4px;
+        }
+
+        /* Desglose detallado */
+        .results-box {
+            background: var(--card-sub);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 14px;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .result-row:first-child {
+            padding-top: 0;
+        }
+
+        .result-row .label {
+            color: var(--subtext);
+            font-weight: 500;
+        }
+
+        .result-row .value {
+            font-weight: 700;
+        }
+
+        .result-row .value.green {
+            color: var(--green);
+        }
+
+        .result-row .value.red {
+            color: var(--red);
+        }
+
+        /* Rendimiento */
+        .roi-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--green-glow);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--green);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 15px;
+            margin-top: 10px;
+        }
+
+        .roi-badge.loss {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--red);
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: var(--subtext);
+            margin-top: 15px;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🧮 CALCULADORA DE ARBITRAJE</h1>
-            <p class="subtitle">Calcula tu ganancia en tiempo real</p>
+            <h1>🧮 CALCULADORA DE INTERVENCIÓN</h1>
+            <p class="subtitle">Calcula Bolívares y comisiones para el rulo BDT</p>
         </header>
 
-        <div class="rates-bar" style="gap: 10px; flex-wrap: wrap;">
-            <div class="rate-chip">
-                <div class="label">Intervención</div>
-                <div id="rate-bcv" class="val pulse">---</div>
+        <!-- Tasas en vivo -->
+        <div class="live-rates">
+            <div class="rate-card" onclick="copyRate('bcv')">
+                <div class="label">BCV (Intervención)</div>
+                <div id="live-bcv" class="value">---</div>
             </div>
-            <div class="rate-chip">
-                <div class="label">P2P Maker</div>
-                <div id="rate-bin-maker" class="val pulse">---</div>
-            </div>
-            <div class="rate-chip">
-                <div class="label">P2P Taker</div>
-                <div id="rate-bin-taker" class="val pulse">---</div>
-            </div>
-            <div class="rate-chip">
-                <div class="label">Spread Maker</div>
-                <div id="rate-spread-maker" class="val green pulse">---</div>
-            </div>
-            <div class="rate-chip">
-                <div class="label">Spread Taker</div>
-                <div id="rate-spread-taker" class="val green pulse">---</div>
+            <div class="rate-card" onclick="copyRate('p2p')">
+                <div class="label">Binance P2P</div>
+                <div id="live-p2p" class="value">---</div>
             </div>
         </div>
 
-        <div class="calc-box">
-            <div class="calc-inputs" style="margin-bottom: 12px; gap: 8px;">
-                <div style="flex: 2;">
-                    <select id="calc-bank" onchange="onBankSelect()" style="width: 100%;">
-                        <option value="BDT">🏢 BDT (Recarga: 1.5% | Pago: 1.5% | BPay: 4.1%)</option>
-                        <option value="BDV_DIGITAL">🇻🇪 BDV (Digital 2.5%)</option>
-                        <option value="BDV_FISICA">🇻🇪 BDV (Física 1.5%)</option>
-                        <option value="TESORO">💰 Tesoro (2.5%)</option>
-                        <option value="ACTIVO">🏦 Activo (1.5%)</option>
-                        <option value="BANCAMIGA">💎 Bancamiga (5%)</option>
-                        <option value="PROVINCIAL">💙 Provincial (0%)</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 120px;">
-                    <select id="calc-p2p-type" onchange="calcArbitrage()" style="width: 100%; height: 42px; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px; font-weight: 600; padding: 0 10px; cursor: pointer;">
-                        <option value="maker">Maker (Anuncio)</option>
-                        <option value="taker">Taker (Rápido)</option>
-                    </select>
+        <!-- Inputs de la calculadora -->
+        <div class="input-group">
+            <label class="input-label">Monto USD a comprar por Intervención</label>
+            <div class="input-wrapper">
+                <span class="input-icon">$</span>
+                <input type="number" id="input-usd" value="100" oninput="calculate()">
+            </div>
+        </div>
+
+        <div class="inputs-row">
+            <div class="input-group">
+                <label class="input-label">Tasa de Intervención (BCV)</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">Bs</span>
+                    <input type="number" id="input-tasa-bcv" value="40.00" step="0.01" oninput="calculate()">
                 </div>
             </div>
-            <div class="calc-inputs" style="gap: 8px; margin-bottom: 20px;">
-                <div style="flex: 1.2; min-width: 110px;">
-                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Cantidad USDT</label>
-                    <input type="number" id="calc-usdt" placeholder="Cantidad USDT" value="100" style="width: 100%;">
-                </div>
-                <div style="flex: 1; min-width: 90px;">
-                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">% Recarga</label>
-                    <input type="number" id="calc-com-reload" step="0.1" value="1.5" style="width: 100%;">
-                </div>
-                <div style="flex: 1; min-width: 90px;">
-                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">% Pago</label>
-                    <input type="number" id="calc-com-pay" step="0.1" value="1.5" style="width: 100%;">
-                </div>
-                <div style="flex: 1; min-width: 90px;">
-                    <label style="font-size: 10px; color: var(--subtext); font-weight: 700; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">% BPay/GPay</label>
-                    <input type="number" id="calc-com-bpay" step="0.1" value="4.1" style="width: 100%;">
+            <div class="input-group">
+                <label class="input-label">Tasa de Venta (Binance P2P)</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">Bs</span>
+                    <input type="number" id="input-tasa-binance" value="48.50" step="0.01" oninput="calculate()">
                 </div>
             </div>
-            <button class="calc-btn" onclick="calcArbitrage()">CALCULAR GANANCIA</button>
+        </div>
 
-            <div id="calc-results" class="calc-results">
-                <div class="calc-row"><span class="label">1️⃣ Vendes USDT en Binance</span><span id="cr-step1" class="val">---</span></div>
-                <div class="calc-row"><span class="label">2️⃣ Compras USD por Intervención</span><span id="cr-step2" class="val">---</span></div>
-                <div class="calc-row"><span class="label">📉 Comisión Recarga Tarjeta</span><span id="cr-com-reload" class="val" style="color:var(--red)">---</span></div>
-                <div class="calc-row"><span class="label">💳 USD en Tarjeta</span><span id="cr-usd-card" class="val" style="color:var(--green)">---</span></div>
-                <div class="calc-row"><span class="label">📉 Comisión Pago Tarjeta (Pase)</span><span id="cr-com-pay" class="val" style="color:var(--red)">---</span></div>
-                <div class="calc-row"><span class="label">💵 USD Neto para Pasarela</span><span id="cr-step3" class="val" style="color:var(--green)">---</span></div>
-                <div class="calc-divider"></div>
+        <!-- Resultado destacado -->
+        <div class="result-highlight">
+            <div class="title">Total Bolívares a depositar en BDT</div>
+            <div id="res-total-ves" class="amount">0.00 Bs</div>
+            <div class="sub">(Incluye el 1.5% de comisión de recarga en Bolívares)</div>
+        </div>
 
-                <div class="calc-row"><span class="label">3️⃣ Envías por BPay / GPay</span><span id="cr-step4" class="val">---</span></div>
-                <div class="calc-row"><span class="label">📉 Comisión BPay / GPay</span><span id="cr-com-bin" class="val" style="color:var(--red)">---</span></div>
-                <div class="calc-row"><span class="label">💰 USDT Final después de todo</span><span id="cr-final" class="val" style="color:var(--green)">---</span></div>
-                <div class="calc-divider"></div>
-
-                <div class="calc-row" style="padding: 15px 0;"><span class="label" style="font-size:16px; font-weight:700;">🏆 GANANCIA NETA</span><span id="cr-profit" class="val profit">---</span></div>
-                <div class="calc-row"><span class="label">📈 Rendimiento</span><span id="cr-pct" class="val profit">---</span></div>
+        <!-- Desglose de cálculos -->
+        <div class="results-box">
+            <div class="result-row">
+                <span class="label">Base de la compra divisas</span>
+                <span id="res-base-ves" class="value">0.00 Bs</span>
             </div>
+            <div class="result-row">
+                <span class="label">Comisión recarga tarjeta (1.5% VES)</span>
+                <span id="res-fee-recarga" class="value red">0.00 Bs</span>
+            </div>
+            <div class="result-row">
+                <span class="label">Capital USDT a vender en Binance</span>
+                <span id="res-capital-usdt" class="value">0.00 USDT</span>
+            </div>
+            <div class="result-row">
+                <span class="label">USD neto cargado en la Tarjeta</span>
+                <span id="res-usd-neto" class="value green">0.00 USD</span>
+            </div>
+            <div class="result-row">
+                <span class="label">USDT final retornado a Binance</span>
+                <span id="res-usdt-retornado" class="value green">0.00 USDT</span>
+            </div>
+        </div>
+
+        <!-- Ganancia Neta -->
+        <div class="results-box" style="text-align: center; padding: 15px;">
+            <div class="input-label" style="margin-bottom: 5px;">Rendimiento del ciclo</div>
+            <div id="res-ganancia-usdt" style="font-size: 22px; font-weight: 800; color: var(--green);">+0.00 USDT</div>
+            <div id="res-roi" class="roi-badge">+0.00%</div>
         </div>
 
         <div class="footer">
-            Tasas en vivo · <a href="https://t.me/venezposible">@venezposible</a>
+            Monitoreado por Venezuela-Finance · <a href="/index.html">Volver al Monitor</a>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let bcvRate = 0, binanceRateMaker = 0, binanceRateTaker = 0;
-        let bpayCommission = 4.1;
+        let liveBcvRate = 0;
+        let liveP2pRate = 0;
 
-        const DEFAULT_COMISIONES = {
-            BDT: { recarga: 1.5, pago: 1.5, bpay: 4.1 },
-            BDV_DIGITAL: { recarga: 2.5, pago: 0.0, bpay: 3.6 },
-            BDV_FISICA: { recarga: 1.5, pago: 0.0, bpay: 3.6 },
-            TESORO: { recarga: 2.5, pago: 0.0, bpay: 3.6 },
-            ACTIVO: { recarga: 1.5, pago: 0.0, bpay: 3.6 },
-            BANCAMIGA: { recarga: 5.0, pago: 0.0, bpay: 3.6 },
-            PROVINCIAL: { recarga: 0.0, pago: 0.0, bpay: 3.6 }
-        };
-
-        function onBankSelect() {
-            const bank = document.getElementById('calc-bank').value;
-            const com = DEFAULT_COMISIONES[bank];
-            if (com) {
-                document.getElementById('calc-com-reload').value = com.recarga;
-                document.getElementById('calc-com-pay').value = com.pago;
-                document.getElementById('calc-com-bpay').value = bpayCommission;
-            }
-        }
-
+        // Escuchar tasas en vivo del servidor
         socket.on('state_update', (state) => {
-            bcvRate = state.bcvRate || 0;
-            binanceRateMaker = state.binanceRateMaker || 0;
-            binanceRateTaker = state.binanceRateTaker || 0;
-            bpayCommission = state.bpayCommission || 4.1;
+            liveBcvRate = state.bcvRate || 0;
+            liveP2pRate = state.binanceRateTaker || 0; // Usamos el P2P Taker como referencia
 
-            document.getElementById('rate-bcv').innerText = bcvRate > 0 ? bcvRate.toFixed(2) : '---';
-            document.getElementById('rate-bin-maker').innerText = binanceRateMaker > 0 ? binanceRateMaker.toFixed(2) : '---';
-            document.getElementById('rate-bin-taker').innerText = binanceRateTaker > 0 ? binanceRateTaker.toFixed(2) : '---';
-            
-            const spMaker = state.spread || 0;
-            const spTaker = state.spreadTaker || 0;
-            
-            const spMakerEl = document.getElementById('rate-spread-maker');
-            const spTakerEl = document.getElementById('rate-spread-taker');
-            
-            spMakerEl.innerText = spMaker.toFixed(2) + '%';
-            spMakerEl.className = spMaker >= 0 ? 'val green pulse' : 'val red pulse';
-            
-            spTakerEl.innerText = spTaker.toFixed(2) + '%';
-            spTakerEl.className = spTaker >= 0 ? 'val green pulse' : 'val red pulse';
-
-            document.querySelectorAll('.pulse').forEach(el => el.classList.remove('pulse'));
+            document.getElementById('live-bcv').innerText = liveBcvRate > 0 ? liveBcvRate.toFixed(2) + ' Bs' : '---';
+            document.getElementById('live-p2p').innerText = liveP2pRate > 0 ? liveP2pRate.toFixed(2) + ' Bs' : '---';
         });
 
-        function calcArbitrage() {
-            const usdt = parseFloat(document.getElementById('calc-usdt').value) || 0;
-            const comReload = parseFloat(document.getElementById('calc-com-reload').value) || 0;
-            const comPay = parseFloat(document.getElementById('calc-com-pay').value) || 0;
-            const comBpay = parseFloat(document.getElementById('calc-com-bpay').value) || 0;
+        // Copiar tasa en vivo al hacer clic en las tarjetas de arriba
+        function copyRate(type) {
+            if (type === 'bcv' && liveBcvRate > 0) {
+                document.getElementById('input-tasa-bcv').value = liveBcvRate.toFixed(2);
+            } else if (type === 'p2p' && liveP2pRate > 0) {
+                document.getElementById('input-tasa-binance').value = liveP2pRate.toFixed(2);
+            }
+            calculate();
+        }
 
-            const p2pType = document.getElementById('calc-p2p-type').value;
-            const binRate = p2pType === 'maker' ? binanceRateMaker : binanceRateTaker;
+        // Realizar los cálculos del rulo cambiario
+        function calculate() {
+            const usdToBuy = parseFloat(document.getElementById('input-usd').value) || 0;
+            const tasaBcv = parseFloat(document.getElementById('input-tasa-bcv').value) || 0;
+            const tasaBinance = parseFloat(document.getElementById('input-tasa-binance').value) || 0;
 
-            if (bcvRate === 0 || binRate === 0) {
-                alert('⏳ Esperando tasas en vivo del monitor...');
+            if (usdToBuy === 0 || tasaBcv === 0 || tasaBinance === 0) {
                 return;
             }
 
-            const bolivares = usdt * binRate;
-            const usdBruto = bolivares / bcvRate;
-            const comRecargaVal = usdBruto * (comReload / 100);
-            const usdTarj = usdBruto - comRecargaVal;
-            const comPagoVal = usdTarj * (comPay / 100);
-            const usdNeto = usdTarj - comPagoVal;
-            const comBinance = usdNeto * (comBpay / 100);
-            const usdtFinal = usdNeto - comBinance;
-            const ganancia = usdtFinal - usdt;
-            const rendimiento = (ganancia / usdt) * 100;
+            // 1. Calcular Bolívares necesarios
+            const baseVes = usdToBuy * tasaBcv;
+            const feeVes = baseVes * 0.015; // 1.5% comisión de recarga que debe estar en Bolívares
+            const totalVes = baseVes + feeVes;
 
-            const fmt = (n) => n.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            // 2. Capital USDT inicial vendido en Binance para conseguir esos Bolívares
+            const capitalUsdt = totalVes / tasaBinance;
 
-            document.getElementById('calc-results').style.display = 'block';
-            document.getElementById('cr-step1').innerText = fmt(bolivares) + ' Bs';
-            document.getElementById('cr-step2').innerText = fmt(usdBruto) + ' USD';
-            document.getElementById('cr-com-reload').innerText = '-' + fmt(comRecargaVal) + ' USD (' + comReload + '%)';
-            document.getElementById('cr-usd-card').innerText = fmt(usdTarj) + ' USD';
-            document.getElementById('cr-com-pay').innerText = '-' + fmt(comPagoVal) + ' USD (' + comPay + '%)';
-            document.getElementById('cr-step3').innerText = fmt(usdNeto) + ' USD';
-            document.getElementById('cr-step4').innerText = fmt(usdNeto) + ' USDT';
-            document.getElementById('cr-com-bin').innerText = '-' + fmt(comBinance) + ' USDT (' + comBpay + '%)';
-            document.getElementById('cr-final').innerText = fmt(usdtFinal) + ' USDT';
+            // 3. USD neto cargado en la Tarjeta BDT
+            // Como pagamos el 1.5% de comisión en Bolívares, los USD comprados entran limpios
+            const usdNeto = usdToBuy;
 
-            const profitEl = document.getElementById('cr-profit');
-            const pctEl = document.getElementById('cr-pct');
-            if (ganancia >= 0) {
-                profitEl.innerText = '+' + fmt(ganancia) + ' USDT';
-                profitEl.className = 'val profit';
-                pctEl.innerText = '+' + fmt(rendimiento) + '%';
-                pctEl.className = 'val profit';
+            // 4. Retorno a Binance vía tarjeta prepagada (BPay)
+            // Se resta el 1.5% del banco emisor internacional + 4.1% de comisión de pasarela de Binance
+            // Aplicado de forma secuencial
+            const usdtRetornado = usdNeto * (1 - 0.015) * (1 - 0.041);
+
+            // 5. Ganancia y rendimiento neto
+            const gananciaUsdt = usdtRetornado - capitalUsdt;
+            const roi = (gananciaUsdt / capitalUsdt) * 100;
+
+            // Formateadores
+            const fmtVes = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const fmtUsd = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Mostrar resultados en la interfaz
+            document.getElementById('res-total-ves').innerText = fmtVes(totalVes) + ' Bs';
+            document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
+            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1.5%)';
+            document.getElementById('res-capital-usdt').innerText = fmtUsd(capitalUsdt) + ' USDT';
+            document.getElementById('res-usd-neto').innerText = fmtUsd(usdNeto) + ' USD';
+            document.getElementById('res-usdt-retornado').innerText = fmtUsd(usdtRetornado) + ' USDT';
+
+            const gananciaEl = document.getElementById('res-ganancia-usdt');
+            const roiEl = document.getElementById('res-roi');
+
+            if (gananciaUsdt >= 0) {
+                gananciaEl.innerText = '+' + fmtUsd(gananciaUsdt) + ' USDT';
+                gananciaEl.style.color = 'var(--green)';
+                roiEl.innerText = '+' + roi.toFixed(2) + '%';
+                roiEl.className = 'roi-badge';
             } else {
-                profitEl.innerText = fmt(ganancia) + ' USDT';
-                profitEl.className = 'val loss';
-                pctEl.innerText = fmt(rendimiento) + '%';
-                pctEl.className = 'val loss';
+                gananciaEl.innerText = fmtUsd(gananciaUsdt) + ' USDT';
+                gananciaEl.style.color = 'var(--red)';
+                roiEl.innerText = roi.toFixed(2) + '%';
+                roiEl.className = 'roi-badge loss';
             }
         }
+
+        // Ejecutar primer cálculo al cargar la página
+        setTimeout(calculate, 500);
     </script>
 </body>
 </html>
