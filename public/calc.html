@@ -296,13 +296,15 @@
 
         <!-- Tasas en vivo -->
         <div class="live-rates">
-            <div class="rate-card" onclick="copyRate('bcv')">
+            <div class="rate-card" onclick="resetRate('bcv')">
                 <div class="label">BCV (Intervención)</div>
-                <div id="live-bcv" class="value">---</div>
+                <div id="card-bcv-val" class="value">0.00 Bs</div>
+                <div id="live-bcv-sub" style="font-size: 10px; color: var(--green); margin-top: 4px; font-weight: 600;">En vivo: ---</div>
             </div>
-            <div class="rate-card" onclick="copyRate('p2p')">
+            <div class="rate-card" onclick="resetRate('p2p')">
                 <div class="label">Binance P2P</div>
-                <div id="live-p2p" class="value">---</div>
+                <div id="card-p2p-val" class="value">0.00 Bs</div>
+                <div id="live-p2p-sub" style="font-size: 10px; color: var(--green); margin-top: 4px; font-weight: 600;">En vivo: ---</div>
             </div>
         </div>
 
@@ -398,12 +400,12 @@
             liveBcvRate = state.bcvRate || 0;
             liveP2pRate = state.binanceRateTaker || 0; // Usamos el P2P Taker como referencia
 
-            document.getElementById('live-bcv').innerText = liveBcvRate > 0 ? liveBcvRate.toFixed(2) + ' Bs' : '---';
-            document.getElementById('live-p2p').innerText = liveP2pRate > 0 ? liveP2pRate.toFixed(2) + ' Bs' : '---';
+            document.getElementById('live-bcv-sub').innerText = liveBcvRate > 0 ? 'En vivo: ' + liveBcvRate.toFixed(2) + ' Bs' : 'En vivo: ---';
+            document.getElementById('live-p2p-sub').innerText = liveP2pRate > 0 ? 'En vivo: ' + liveP2pRate.toFixed(2) + ' Bs' : 'En vivo: ---';
         });
 
-        // Copiar tasa en vivo al hacer clic en las tarjetas de arriba
-        function copyRate(type) {
+        // Copiar tasa en vivo al hacer clic en las tarjetas de arriba (Restaurar)
+        function resetRate(type) {
             if (type === 'bcv' && liveBcvRate > 0) {
                 document.getElementById('input-tasa-bcv').value = liveBcvRate.toFixed(2);
             } else if (type === 'p2p' && liveP2pRate > 0) {
@@ -417,6 +419,10 @@
             const startUsdt = parseFloat(document.getElementById('input-usdt').value) || 0;
             const tasaBinance = parseFloat(document.getElementById('input-tasa-binance').value) || 0;
             const tasaBcv = parseFloat(document.getElementById('input-tasa-bcv').value) || 0;
+
+            // Actualizar valores numéricos de las tarjetas superiores en tiempo real
+            document.getElementById('card-bcv-val').innerText = tasaBcv > 0 ? tasaBcv.toFixed(2) + ' Bs' : '0.00 Bs';
+            document.getElementById('card-p2p-val').innerText = tasaBinance > 0 ? tasaBinance.toFixed(2) + ' Bs' : '0.00 Bs';
 
             if (startUsdt === 0 || tasaBinance === 0 || tasaBcv === 0) {
                 return;
