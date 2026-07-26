@@ -308,21 +308,14 @@
 
         <!-- Inputs de la calculadora -->
         <div class="input-group">
-            <label class="input-label">Monto USD a comprar por Intervención</label>
+            <label class="input-label">Monto Inicial en USDT (Capital a Vender)</label>
             <div class="input-wrapper">
-                <span class="input-icon">$</span>
-                <input type="number" id="input-usd" value="100" oninput="calculate()">
+                <span class="input-icon">T</span>
+                <input type="number" id="input-usdt" value="100" oninput="calculate()">
             </div>
         </div>
 
         <div class="inputs-row">
-            <div class="input-group">
-                <label class="input-label">Tasa de Intervención (BCV)</label>
-                <div class="input-wrapper">
-                    <span class="input-icon">Bs</span>
-                    <input type="number" id="input-tasa-bcv" value="40.00" step="0.01" oninput="calculate()">
-                </div>
-            </div>
             <div class="input-group">
                 <label class="input-label">Tasa de Venta (Binance P2P)</label>
                 <div class="input-wrapper">
@@ -330,51 +323,64 @@
                     <input type="number" id="input-tasa-binance" value="48.50" step="0.01" oninput="calculate()">
                 </div>
             </div>
+            <div class="input-group">
+                <label class="input-label">Tasa de Intervención (BCV)</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">Bs</span>
+                    <input type="number" id="input-tasa-bcv" value="40.00" step="0.01" oninput="calculate()">
+                </div>
+            </div>
         </div>
 
-        <!-- Resultado destacado -->
+        <!-- Resultado destacado (USDT Retornado) -->
         <div class="result-highlight">
-            <div class="title" style="margin-bottom: 12px;">Total Bolívares a depositar en BDT</div>
-            <div class="breakdown-ves" style="margin-bottom: 12px; font-size: 14px; color: var(--subtext); display: flex; justify-content: center; gap: 8px; font-weight: 500; align-items: center; flex-wrap: wrap;">
-                <span id="res-base-ves-highlight" style="color: #fff; font-weight: 700;">0.00 Bs</span>
-                <span style="color: var(--subtext); font-size: 11px;">(Compra)</span>
-                <span style="color: var(--subtext); font-weight: 700;">+</span>
-                <span id="res-fee-ves-highlight" style="color: var(--red); font-weight: 700;">0.00 Bs</span>
-                <span style="color: var(--subtext); font-size: 11px;">(1.5% Comisión)</span>
+            <div class="title" style="margin-bottom: 12px; color: var(--green);">Retorno Estimado en Binance</div>
+            <div id="res-total-ves" class="amount">0.00 USDT</div>
+            <div class="sub" style="margin-top: 6px; font-weight: 500;">
+                Ganancia Neta: <span id="res-ganancia-usdt-highlight" style="color: var(--green); font-weight: 700;">+0.00 USDT</span> 
+                <span id="res-roi-badge" class="roi-badge" style="margin-top: 0; margin-left: 8px; padding: 4px 10px; font-size: 12px;">+0.00%</span>
             </div>
-            <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 0 40px 14px 40px;"></div>
-            <div id="res-total-ves" class="amount">0.00 Bs</div>
         </div>
 
         <!-- Desglose de cálculos -->
         <div class="results-box">
+            <div class="input-label" style="margin-bottom: 12px; font-weight: 700; color: #fff;">1. Fase Bolívares (BDT)</div>
             <div class="result-row">
-                <span class="label">Base de la compra divisas</span>
-                <span id="res-base-ves" class="value">0.00 Bs</span>
+                <span class="label">Bolívares generados (Venta P2P)</span>
+                <span id="res-total-ves-breakdown" class="value">0.00 Bs</span>
+            </div>
+            <div class="result-row">
+                <span class="label">Base usada para compra divisas</span>
+                <span id="res-base-ves" class="value" style="color: #fff;">0.00 Bs</span>
             </div>
             <div class="result-row">
                 <span class="label">Comisión recarga tarjeta (1.5% VES)</span>
                 <span id="res-fee-recarga" class="value red">0.00 Bs</span>
             </div>
-            <div class="result-row">
-                <span class="label">Capital USDT a vender en Binance</span>
-                <span id="res-capital-usdt" class="value">0.00 USDT</span>
-            </div>
-            <div class="result-row">
-                <span class="label">USD neto cargado en la Tarjeta</span>
-                <span id="res-usd-neto" class="value green">0.00 USD</span>
-            </div>
-            <div class="result-row">
-                <span class="label">USDT final retornado a Binance</span>
-                <span id="res-usdt-retornado" class="value green">0.00 USDT</span>
+            <div class="result-row" style="border-bottom: none; padding-bottom: 0;">
+                <span class="label">USD comprados por Intervención</span>
+                <span id="res-usd-comprados" class="value green">0.00 USD</span>
             </div>
         </div>
 
-        <!-- Ganancia Neta -->
-        <div class="results-box" style="text-align: center; padding: 15px;">
-            <div class="input-label" style="margin-bottom: 5px;">Rendimiento del ciclo</div>
-            <div id="res-ganancia-usdt" style="font-size: 22px; font-weight: 800; color: var(--green);">+0.00 USDT</div>
-            <div id="res-roi" class="roi-badge">+0.00%</div>
+        <div class="results-box">
+            <div class="input-label" style="margin-bottom: 12px; font-weight: 700; color: #fff;">2. Fase Retorno (Binance Pay)</div>
+            <div class="result-row">
+                <span class="label">USD neto cargado en Tarjeta</span>
+                <span id="res-usd-neto" class="value">0.00 USD</span>
+            </div>
+            <div class="result-row">
+                <span class="label">Comisión de Pase Banco (1.5% USD)</span>
+                <span id="res-fee-pase" class="value red">0.00 USD</span>
+            </div>
+            <div class="result-row">
+                <span class="label">Comisión Binance Pay (4.1% USD)</span>
+                <span id="res-fee-bpay" class="value red">0.00 USD</span>
+            </div>
+            <div class="result-row" style="border-bottom: none; padding-bottom: 0;">
+                <span class="label">USDT final recibido</span>
+                <span id="res-usdt-retornado" class="value green">0.00 USDT</span>
+            </div>
         </div>
 
         <div class="footer">
@@ -408,52 +414,47 @@
 
         // Realizar los cálculos del rulo cambiario
         function calculate() {
-            const usdToBuy = parseFloat(document.getElementById('input-usd').value) || 0;
-            const tasaBcv = parseFloat(document.getElementById('input-tasa-bcv').value) || 0;
+            const startUsdt = parseFloat(document.getElementById('input-usdt').value) || 0;
             const tasaBinance = parseFloat(document.getElementById('input-tasa-binance').value) || 0;
+            const tasaBcv = parseFloat(document.getElementById('input-tasa-bcv').value) || 0;
 
-            if (usdToBuy === 0 || tasaBcv === 0 || tasaBinance === 0) {
+            if (startUsdt === 0 || tasaBinance === 0 || tasaBcv === 0) {
                 return;
             }
 
-            // 1. Calcular Bolívares necesarios
+            // 1. Bolívares totales generados al vender el USDT
+            const totalVes = startUsdt * tasaBinance;
+
+            // 2. Desglose de compra en BDT
+            // El total de VES recibido debe cubrir el costo de compra y el 1.5% de recarga:
+            // totalVes = USD * tasaBcv * 1.015
+            // De donde: USD comprados = totalVes / (tasaBcv * 1.015)
+            const usdToBuy = totalVes / (tasaBcv * 1.015);
             const baseVes = usdToBuy * tasaBcv;
-            const feeVes = baseVes * 0.015; // 1.5% comisión de recarga que debe estar en Bolívares
-            const totalVes = baseVes + feeVes;
+            const feeVes = baseVes * 0.015;
 
-            // 2. Capital USDT inicial vendido en Binance para conseguir esos Bolívares
-            const capitalUsdt = totalVes / tasaBinance;
-
-            // 3. USD neto cargado en la Tarjeta BDT
-            // Como pagamos el 1.5% de comisión en Bolívares, los USD comprados entran limpios
+            // 3. Fase Retorno: USD en tarjeta y comisiones
             const usdNeto = usdToBuy;
+            const feePaseVal = usdNeto * 0.015; // 1.5% pase internacional banco
+            const feeBpayVal = usdNeto * 0.041; // 4.1% BPay Binance
 
-            // 4. Retorno a Binance vía tarjeta prepagada (BPay)
-            // Se resta el 1.5% del banco emisor internacional + 4.1% de comisión de pasarela de Binance
-            // Aplicado de forma secuencial
+            // USDT final recibido en Binance (aplicado de forma secuencial)
             const usdtRetornado = usdNeto * (1 - 0.015) * (1 - 0.041);
 
-            // 5. Ganancia y rendimiento neto
-            const gananciaUsdt = usdtRetornado - capitalUsdt;
-            const roi = (gananciaUsdt / capitalUsdt) * 100;
+            // 4. Ganancia neta y rendimiento
+            const gananciaUsdt = usdtRetornado - startUsdt;
+            const roi = (gananciaUsdt / startUsdt) * 100;
 
             // Formateadores
             const fmtVes = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const fmtUsd = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             // Mostrar resultados en la interfaz
-            document.getElementById('res-total-ves').innerText = fmtVes(totalVes) + ' Bs';
-            document.getElementById('res-base-ves-highlight').innerText = fmtVes(baseVes) + ' Bs';
-            document.getElementById('res-fee-ves-highlight').innerText = fmtVes(feeVes) + ' Bs';
-            document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
-            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1.5%)';
-            document.getElementById('res-capital-usdt').innerText = fmtUsd(capitalUsdt) + ' USDT';
-            document.getElementById('res-usd-neto').innerText = fmtUsd(usdNeto) + ' USD';
-            document.getElementById('res-usdt-retornado').innerText = fmtUsd(usdtRetornado) + ' USDT';
-
-            const gananciaEl = document.getElementById('res-ganancia-usdt');
-            const roiEl = document.getElementById('res-roi');
-
+            document.getElementById('res-total-ves').innerText = fmtUsd(usdtRetornado) + ' USDT';
+            
+            const gananciaEl = document.getElementById('res-ganancia-usdt-highlight');
+            const roiEl = document.getElementById('res-roi-badge');
+            
             if (gananciaUsdt >= 0) {
                 gananciaEl.innerText = '+' + fmtUsd(gananciaUsdt) + ' USDT';
                 gananciaEl.style.color = 'var(--green)';
@@ -465,6 +466,18 @@
                 roiEl.innerText = roi.toFixed(2) + '%';
                 roiEl.className = 'roi-badge loss';
             }
+
+            // Desglose BDT
+            document.getElementById('res-total-ves-breakdown').innerText = fmtVes(totalVes) + ' Bs';
+            document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
+            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1.5%)';
+            document.getElementById('res-usd-comprados').innerText = fmtUsd(usdToBuy) + ' USD';
+
+            // Desglose Binance Pay
+            document.getElementById('res-usd-neto').innerText = fmtUsd(usdNeto) + ' USD';
+            document.getElementById('res-fee-pase').innerText = '-' + fmtUsd(feePaseVal) + ' USD (1.5%)';
+            document.getElementById('res-fee-bpay').innerText = '-' + fmtUsd(feeBpayVal) + ' USD (4.1%)';
+            document.getElementById('res-usdt-retornado').innerText = fmtUsd(usdtRetornado) + ' USDT';
         }
 
         // Ejecutar primer cálculo al cargar la página
