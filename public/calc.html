@@ -334,9 +334,16 @@
 
         <!-- Resultado destacado -->
         <div class="result-highlight">
-            <div class="title">Total Bolívares a depositar en BDT</div>
+            <div class="title" style="margin-bottom: 12px;">Total Bolívares a depositar en BDT</div>
+            <div class="breakdown-ves" style="margin-bottom: 12px; font-size: 14px; color: var(--subtext); display: flex; justify-content: center; gap: 8px; font-weight: 500; align-items: center; flex-wrap: wrap;">
+                <span id="res-base-ves-highlight" style="color: #fff; font-weight: 700;">0.00 Bs</span>
+                <span style="color: var(--subtext); font-size: 11px;">(Compra)</span>
+                <span style="color: var(--subtext); font-weight: 700;">+</span>
+                <span id="res-fee-ves-highlight" style="color: var(--red); font-weight: 700;">0.00 Bs</span>
+                <span style="color: var(--subtext); font-size: 11px;">(1.5% Comisión)</span>
+            </div>
+            <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 0 40px 14px 40px;"></div>
             <div id="res-total-ves" class="amount">0.00 Bs</div>
-            <div class="sub">(Incluye el 1.5% de comisión de recarga en Bolívares)</div>
         </div>
 
         <!-- Desglose de cálculos -->
@@ -436,6 +443,8 @@
 
             // Mostrar resultados en la interfaz
             document.getElementById('res-total-ves').innerText = fmtVes(totalVes) + ' Bs';
+            document.getElementById('res-base-ves-highlight').innerText = fmtVes(baseVes) + ' Bs';
+            document.getElementById('res-fee-ves-highlight').innerText = fmtVes(feeVes) + ' Bs';
             document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
             document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1.5%)';
             document.getElementById('res-capital-usdt').innerText = fmtUsd(capitalUsdt) + ' USDT';
