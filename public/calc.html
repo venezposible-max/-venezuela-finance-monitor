@@ -527,7 +527,7 @@
                 <span id="res-usd-neto" class="value">0.00 USD</span>
             </div>
             <div class="result-row">
-                <span class="label">Comisión de Pase Banco (1% USD)</span>
+                <span class="label">Comisión de Pase Banco (1.5% USD)</span>
                 <span id="res-fee-pase" class="value red">0.00 USD</span>
             </div>
             <div class="result-row">
@@ -613,11 +613,11 @@
 
             // 3. Fase Retorno: USD en tarjeta y comisiones
             const usdNeto = usdToBuy;
-            const feePaseVal = usdNeto * 0.01; // 1% pase internacional banco
+            const feePaseVal = usdNeto * 0.015; // 1.5% pase internacional banco
             const feeBpayVal = usdNeto * 0.041; // 4.1% BPay Binance
 
             // USDT final recibido en Binance (aplicado de forma secuencial)
-            const usdtRetornado = usdNeto * (1 - 0.01) * (1 - 0.041);
+            const usdtRetornado = usdNeto * (1 - 0.015) * (1 - 0.041);
 
             // 4. Ganancia neta y rendimiento
             const gananciaUsdt = usdtRetornado - startUsdt;
@@ -663,7 +663,7 @@
 
             // Desglose Binance Pay
             document.getElementById('res-usd-neto').innerText = fmtUsd(usdNeto) + ' USD';
-            document.getElementById('res-fee-pase').innerText = '-' + fmtUsd(feePaseVal) + ' USD (1%)';
+            document.getElementById('res-fee-pase').innerText = '-' + fmtUsd(feePaseVal) + ' USD (1.5%)';
             document.getElementById('res-fee-bpay').innerText = '-' + fmtUsd(feeBpayVal) + ' USD (4.1%)';
             document.getElementById('res-usdt-retornado').innerText = fmtUsd(usdtRetornado) + ' USDT';
         }
