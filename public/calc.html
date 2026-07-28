@@ -507,6 +507,10 @@
                 <span id="res-total-ves-breakdown" class="value">0.00 Bs</span>
             </div>
             <div class="result-row">
+                <span class="label">USD comprados por Intervención</span>
+                <span id="res-usd-comprados" class="value green">0.00 USD</span>
+            </div>
+            <div class="result-row">
                 <span class="label">Base usada para compra divisas</span>
                 <span id="res-base-ves" class="value" style="color: #fff;">0.00 Bs</span>
             </div>
@@ -515,8 +519,8 @@
                 <span id="res-fee-recarga" class="value red">0.00 Bs</span>
             </div>
             <div class="result-row" style="border-bottom: none; padding-bottom: 0;">
-                <span class="label">USD comprados por Intervención</span>
-                <span id="res-usd-comprados" class="value green">0.00 USD</span>
+                <span class="label">Sobrante en cuenta (Remanente Bs)</span>
+                <span id="res-remanente-ves" class="value" style="color: var(--subtext);">0.00 Bs</span>
             </div>
         </div>
 
@@ -610,13 +614,21 @@
             const baseVesRaw = usdToBuyRaw * tasaBcv;
             
             // El banco exige que la base de compra sea múltiplo de 5 (redondeando hacia abajo)
-            const baseVes = Math.floor(baseVesRaw / 5) * 5;
             
-            // El remanente/sobrante pasa completo a la comisión de recarga
-            const feeVes = totalVes - baseVes;
+            // El banco exige que los dólares finales comprados sean múltiplos de 5 USD (redondeando hacia abajo)
+            const usdToBuy = Math.floor(usdToBuyRaw / 5) * 5;
             
-            // USD realmente comprados con la base redondeada
-            const usdToBuy = baseVes / tasaBcv;
+            // Bolívares base requeridos para la compra de esa cantidad de dólares
+            const baseVes = usdToBuy * tasaBcv;
+            
+            // Comisión del 1% en Bolívares cobrada sobre el monto real comprado
+            const feeVes = baseVes * 0.01;
+            
+            // Total Bolívares gastados (Compra + Comisión)
+            const totalSpentVes = baseVes + feeVes;
+            
+            // Sobrante de bolívares en cuenta (remanente que no se pudo gastar porque los USD deben ser múltiplo de 5)
+            const remanenteVes = totalVes - totalSpentVes;
 
             // 3. Fase Retorno: USD en tarjeta y comisiones
             const usdNeto = usdToBuy;
@@ -664,9 +676,10 @@
 
             // Desglose BDT
             document.getElementById('res-total-ves-breakdown').innerText = fmtVes(totalVes) + ' Bs';
-            document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
-            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1% + Remanente)';
             document.getElementById('res-usd-comprados').innerText = fmtUsd(usdToBuy) + ' USD';
+            document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
+            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1%)';
+            document.getElementById('res-remanente-ves').innerText = fmtVes(remanenteVes) + ' Bs';
 
             // Desglose Binance Pay
             document.getElementById('res-usd-neto').innerText = fmtUsd(usdNeto) + ' USD';
