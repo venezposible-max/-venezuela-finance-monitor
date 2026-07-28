@@ -596,6 +596,11 @@
             const tasaBinance = parseFloat(document.getElementById('input-tasa-binance').value) || 0;
             const tasaBcv = parseFloat(document.getElementById('input-tasa-bcv').value) || 0;
 
+            // Guardar inputs en localStorage para persistir el estado si se cambia de ventana o pestaña
+            localStorage.setItem('calc_input_usdt', document.getElementById('input-usdt').value);
+            localStorage.setItem('calc_input_tasa_binance', document.getElementById('input-tasa-binance').value);
+            localStorage.setItem('calc_input_tasa_bcv', document.getElementById('input-tasa-bcv').value);
+
             // Actualizar valores numéricos de las tarjetas superiores en tiempo real
             document.getElementById('card-bcv-val').innerText = tasaBcv > 0 ? tasaBcv.toFixed(2) + ' Bs' : '0.00 Bs';
             document.getElementById('card-p2p-val').innerText = tasaBinance > 0 ? tasaBinance.toFixed(2) + ' Bs' : '0.00 Bs';
@@ -764,8 +769,16 @@
             }
         }
 
-        // Inicializar
+        // Inicializar y restaurar inputs guardados
         setTimeout(() => {
+            const savedUsdt = localStorage.getItem('calc_input_usdt');
+            const savedTasaBinance = localStorage.getItem('calc_input_tasa_binance');
+            const savedTasaBcv = localStorage.getItem('calc_input_tasa_bcv');
+
+            if (savedUsdt !== null) document.getElementById('input-usdt').value = savedUsdt;
+            if (savedTasaBinance !== null) document.getElementById('input-tasa-binance').value = savedTasaBinance;
+            if (savedTasaBcv !== null) document.getElementById('input-tasa-bcv').value = savedTasaBcv;
+
             calculate();
             renderHistory();
         }, 500);
