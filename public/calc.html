@@ -516,15 +516,23 @@
             </div>
             <div class="result-row">
                 <span class="label">Base usada para compra divisas</span>
-                <span id="res-base-ves" class="value" style="color: #fff;">0.00 Bs</span>
+                <span id="res-base-ves" class="value">0.00 Bs</span>
             </div>
             <div class="result-row">
-                <span class="label">Comisión recarga tarjeta (1% VES)</span>
+                <span class="label">Comisión Asignación BDT (0.5%)</span>
+                <span id="res-fee-bdt-assign" class="value red">0.00 Bs</span>
+            </div>
+            <div class="result-row">
+                <span class="label" style="color: #fff; font-weight: 600;">Total Bloqueado por el Banco</span>
+                <span id="res-total-locked-ves" class="value" style="color: #fff;">0.00 Bs</span>
+            </div>
+            <div class="result-row">
+                <span class="label">Comisión Recarga Tarjeta (1%)</span>
                 <span id="res-fee-recarga" class="value red">0.00 Bs</span>
             </div>
             <div class="result-row" style="border-bottom: none; padding-bottom: 0;">
-                <span class="label">Sobrante en cuenta (Remanente Bs)</span>
-                <span id="res-remanente-ves" class="value" style="color: var(--subtext);">0.00 Bs</span>
+                <span id="res-remanente-label" class="label">Sobrante en cuenta (Remanente)</span>
+                <span id="res-remanente-ves" class="value">0.00 Bs</span>
             </div>
         </div>
 
@@ -617,24 +625,28 @@
             const startUsdt = totalVes / tasaBinance;
 
             // 2. Desglose de compra en BDT
-            // El total de VES recibido debe cubrir el costo de compra y el 1% de recarga:
-            // totalVes = USD * tasaBcv * 1.01 -> usdToBuyRaw = totalVes / (tasaBcv * 1.01)
-            const usdToBuyRaw = totalVes / (tasaBcv * 1.01);
+            // El banco bloquea el monto de compra + 0.5% de comisión de asignación.
+            // Para calcular los USD máximos que podemos comprar basándonos en el bloqueo:
+            // totalVes = USD * tasaBcv * 1.005 -> usdToBuyRaw = totalVes / (tasaBcv * 1.005)
+            const usdToBuyRaw = totalVes / (tasaBcv * 1.005);
             
-            // El banco exige que los dólares finales comprados sean múltiplos de 5 USD (redondeando hacia abajo)
+            // El banco exige que los dólares comprados sean múltiplos de 5 USD (redondeando hacia abajo)
             const usdToBuy = Math.floor(usdToBuyRaw / 5) * 5;
             
             // Bolívares base requeridos para la compra de esa cantidad de dólares
             const baseVes = usdToBuy * tasaBcv;
             
-            // Comisión del 1% en Bolívares cobrada sobre el monto real comprado
-            const feeVes = baseVes * 0.01;
+            // Comisión del 0.5% en Bolívares cobrada sobre el monto real comprado (comisión de asignación bloqueada)
+            const feeVesPurchase = baseVes * 0.005;
             
-            // Total Bolívares gastados (Compra + Comisión)
-            const totalSpentVes = baseVes + feeVes;
+            // Total bloqueado por el banco (Compra + 0.5% Asignación)
+            const totalLockedVes = baseVes + feeVesPurchase;
             
-            // Sobrante de bolívares en cuenta (remanente que no se pudo gastar porque los USD deben ser múltiplo de 5)
-            const remanenteVes = totalVes - totalSpentVes;
+            // Comisión del 1% en Bolívares por recarga de tarjeta (se debita al pasar a la Master Card)
+            const feeVesCard = baseVes * 0.01;
+            
+            // Sobrante final en cuenta BDT después de comprar los dólares y pagar ambas comisiones (0.5% y 1%)
+            const remanenteVes = totalVes - (totalLockedVes + feeVesCard);
 
             // 3. Fase Retorno: USD en tarjeta y comisiones
             const usdNeto = usdToBuy;
@@ -685,8 +697,22 @@
             document.getElementById('res-capital-usdt').innerText = fmtUsd(startUsdt) + ' USDT';
             document.getElementById('res-usd-comprados').innerText = fmtUsd(usdToBuy) + ' USD';
             document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
-            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1%)';
-            document.getElementById('res-remanente-ves').innerText = fmtVes(remanenteVes) + ' Bs';
+            document.getElementById('res-fee-bdt-assign').innerText = '+' + fmtVes(feeVesPurchase) + ' Bs (0.5%)';
+            document.getElementById('res-total-locked-ves').innerText = fmtVes(totalLockedVes) + ' Bs';
+            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVesCard) + ' Bs (1%)';
+            
+            const remEl = document.getElementById('res-remanente-ves');
+            const labelEl = document.getElementById('res-remanente-label');
+            remEl.innerText = fmtVes(remanenteVes) + ' Bs';
+            if (remanenteVes >= 0) {
+                labelEl.innerText = 'Sobrante en cuenta (Remanente)';
+                labelEl.style.color = 'var(--subtext)';
+                remEl.style.color = 'var(--subtext)';
+            } else {
+                labelEl.innerText = 'Defecto (Faltante para recarga)';
+                labelEl.style.color = 'var(--red)';
+                remEl.style.color = 'var(--red)';
+            }
 
             // Desglose Binance Pay
             document.getElementById('res-usd-neto').innerText = fmtUsd(usdNeto) + ' USD';
