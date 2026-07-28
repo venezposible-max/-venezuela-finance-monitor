@@ -605,11 +605,18 @@
 
             // 2. Desglose de compra en BDT
             // El total de VES recibido debe cubrir el costo de compra y el 1% de recarga:
-            // totalVes = USD * tasaBcv * 1.01
-            // De donde: USD comprados = totalVes / (tasaBcv * 1.01)
-            const usdToBuy = totalVes / (tasaBcv * 1.01);
-            const baseVes = usdToBuy * tasaBcv;
-            const feeVes = baseVes * 0.01;
+            // totalVes = USD * tasaBcv * 1.01 -> usdToBuyRaw = totalVes / (tasaBcv * 1.01)
+            const usdToBuyRaw = totalVes / (tasaBcv * 1.01);
+            const baseVesRaw = usdToBuyRaw * tasaBcv;
+            
+            // El banco exige que la base de compra sea múltiplo de 5 (redondeando hacia abajo)
+            const baseVes = Math.floor(baseVesRaw / 5) * 5;
+            
+            // El remanente/sobrante pasa completo a la comisión de recarga
+            const feeVes = totalVes - baseVes;
+            
+            // USD realmente comprados con la base redondeada
+            const usdToBuy = baseVes / tasaBcv;
 
             // 3. Fase Retorno: USD en tarjeta y comisiones
             const usdNeto = usdToBuy;
@@ -658,7 +665,7 @@
             // Desglose BDT
             document.getElementById('res-total-ves-breakdown').innerText = fmtVes(totalVes) + ' Bs';
             document.getElementById('res-base-ves').innerText = fmtVes(baseVes) + ' Bs';
-            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1%)';
+            document.getElementById('res-fee-recarga').innerText = '+' + fmtVes(feeVes) + ' Bs (1% + Remanente)';
             document.getElementById('res-usd-comprados').innerText = fmtUsd(usdToBuy) + ' USD';
 
             // Desglose Binance Pay
