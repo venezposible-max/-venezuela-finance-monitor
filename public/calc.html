@@ -465,10 +465,10 @@
 
         <!-- Inputs de la calculadora -->
         <div class="input-group">
-            <label class="input-label">Monto Inicial en USDT (Capital a Vender)</label>
+            <label class="input-label">Monto Inicial en Bolívares (VES)</label>
             <div class="input-wrapper">
-                <span class="input-icon">T</span>
-                <input type="number" id="input-usdt" value="100" oninput="calculate()">
+                <span class="input-icon">Bs</span>
+                <input type="number" id="input-ves" value="840000" oninput="calculate()">
             </div>
         </div>
 
@@ -503,8 +503,12 @@
         <div class="results-box">
             <div class="input-label" style="margin-bottom: 12px; font-weight: 700; color: #fff;">1. Fase Bolívares (BDT)</div>
             <div class="result-row">
-                <span class="label">Bolívares generados (Venta P2P)</span>
+                <span class="label">Monto Inicial en Bolívares</span>
                 <span id="res-total-ves-breakdown" class="value">0.00 Bs</span>
+            </div>
+            <div class="result-row">
+                <span class="label">Equivalente Inicial en USDT</span>
+                <span id="res-capital-usdt" class="value" style="color: var(--subtext);">0.00 USDT</span>
             </div>
             <div class="result-row">
                 <span class="label">USD comprados por Intervención</span>
@@ -592,12 +596,12 @@
 
         // Realizar los cálculos del rulo cambiario
         function calculate() {
-            const startUsdt = parseFloat(document.getElementById('input-usdt').value) || 0;
+            const totalVes = parseFloat(document.getElementById('input-ves').value) || 0;
             const tasaBinance = parseFloat(document.getElementById('input-tasa-binance').value) || 0;
             const tasaBcv = parseFloat(document.getElementById('input-tasa-bcv').value) || 0;
 
             // Guardar inputs en localStorage para persistir el estado si se cambia de ventana o pestaña
-            localStorage.setItem('calc_input_usdt', document.getElementById('input-usdt').value);
+            localStorage.setItem('calc_input_ves', document.getElementById('input-ves').value);
             localStorage.setItem('calc_input_tasa_binance', document.getElementById('input-tasa-binance').value);
             localStorage.setItem('calc_input_tasa_bcv', document.getElementById('input-tasa-bcv').value);
 
@@ -605,20 +609,17 @@
             document.getElementById('card-bcv-val').innerText = tasaBcv > 0 ? tasaBcv.toFixed(2) + ' Bs' : '0.00 Bs';
             document.getElementById('card-p2p-val').innerText = tasaBinance > 0 ? tasaBinance.toFixed(2) + ' Bs' : '0.00 Bs';
 
-            if (startUsdt === 0 || tasaBinance === 0 || tasaBcv === 0) {
+            if (totalVes === 0 || tasaBinance === 0 || tasaBcv === 0) {
                 return;
             }
 
-            // 1. Bolívares totales generados al vender el USDT
-            const totalVes = startUsdt * tasaBinance;
+            // 1. Calcular inversión inicial equivalente en USDT (que se vendería para obtener estos Bolívares)
+            const startUsdt = totalVes / tasaBinance;
 
             // 2. Desglose de compra en BDT
             // El total de VES recibido debe cubrir el costo de compra y el 1% de recarga:
             // totalVes = USD * tasaBcv * 1.01 -> usdToBuyRaw = totalVes / (tasaBcv * 1.01)
             const usdToBuyRaw = totalVes / (tasaBcv * 1.01);
-            const baseVesRaw = usdToBuyRaw * tasaBcv;
-            
-            // El banco exige que la base de compra sea múltiplo de 5 (redondeando hacia abajo)
             
             // El banco exige que los dólares finales comprados sean múltiplos de 5 USD (redondeando hacia abajo)
             const usdToBuy = Math.floor(usdToBuyRaw / 5) * 5;
@@ -771,11 +772,11 @@
 
         // Inicializar y restaurar inputs guardados
         setTimeout(() => {
-            const savedUsdt = localStorage.getItem('calc_input_usdt');
+            const savedVes = localStorage.getItem('calc_input_ves');
             const savedTasaBinance = localStorage.getItem('calc_input_tasa_binance');
             const savedTasaBcv = localStorage.getItem('calc_input_tasa_bcv');
 
-            if (savedUsdt !== null) document.getElementById('input-usdt').value = savedUsdt;
+            if (savedVes !== null) document.getElementById('input-ves').value = savedVes;
             if (savedTasaBinance !== null) document.getElementById('input-tasa-binance').value = savedTasaBinance;
             if (savedTasaBcv !== null) document.getElementById('input-tasa-bcv').value = savedTasaBcv;
 
