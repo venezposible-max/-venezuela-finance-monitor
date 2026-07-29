@@ -630,8 +630,12 @@
             // totalVes = USD * tasaBcv * 1.005 -> usdToBuyRaw = totalVes / (tasaBcv * 1.005)
             const usdToBuyRaw = totalVes / (tasaBcv * 1.005);
             
+            // Redondear a 2 decimales para evitar imprecisiones de coma flotante (ej: 999.999 USD) 
+            // que harían que Math.floor lo bajara injustamente al múltiplo de 5 inferior (995 en vez de 1000)
+            const usdToBuyRawRounded = Math.round(usdToBuyRaw * 100) / 100;
+            
             // El banco exige que los dólares comprados sean múltiplos de 5 USD (redondeando hacia abajo)
-            const usdToBuy = Math.floor(usdToBuyRaw / 5) * 5;
+            const usdToBuy = Math.floor(usdToBuyRawRounded / 5) * 5;
             
             // Bolívares base requeridos para la compra de esa cantidad de dólares
             const baseVes = usdToBuy * tasaBcv;
