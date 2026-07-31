@@ -752,8 +752,13 @@
                         </div>
                         <div style="display: flex; align-items: center;">
                             <div class="stats">
-                                <span class="values">${fmt(item.start)} ➡️ ${fmt(item.end)} USDT</span>
-                                <span class="${profitClass}">${sign}${fmt(item.profit)} USDT (${sign}${item.roi.toFixed(2)}%)</span>
+                                <span class="values" style="font-size: 11px; font-weight: normal; color: var(--subtext);">
+                                    Inversión: <b>${fmt(item.start)} USDT</b>
+                                </span>
+                                <span class="values" style="font-size: 13px; font-weight: 700; color: #fff; margin-top: 1px;">
+                                    Retorno: <b>${fmt(item.end)} USDT</b>
+                                </span>
+                                <span class="${profitClass}" style="margin-top: 1px;">${sign}${fmt(item.profit)} USDT (${sign}${item.roi.toFixed(2)}%)</span>
                             </div>
                             <button class="delete-item-btn" onclick="deleteRecord(${item.id})" title="Borrar registro">
                                 🗑️
