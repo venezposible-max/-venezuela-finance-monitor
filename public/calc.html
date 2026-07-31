@@ -670,7 +670,8 @@
                 profit: gananciaUsdt,
                 roi: roi,
                 tBinance: tasaBinance,
-                tBcv: tasaBcv
+                tBcv: tasaBcv,
+                usdToBuy: usdToBuy
             };
 
             // Formateadores
@@ -741,11 +742,13 @@
             listEl.innerHTML = history.map(item => {
                 const profitClass = item.profit >= 0 ? 'profit' : 'profit loss';
                 const sign = item.profit >= 0 ? '+' : '';
+                // Mostrar los USD comprados si existen en el registro
+                const usdBoughtText = item.usdToBuy ? ` | Compra: <b>$${item.usdToBuy.toLocaleString('es-VE')}</b>` : '';
                 return `
                     <div class="history-item">
                         <div class="details">
                             <span class="meta">📅 ${item.date}</span>
-                            <span class="rates">Binance: <b>${item.tBinance.toFixed(2)}</b> | BCV: <b>${item.tBcv.toFixed(2)}</b></span>
+                            <span class="rates">Binance: <b>${item.tBinance.toFixed(2)}</b> | BCV: <b>${item.tBcv.toFixed(2)}</b>${usdBoughtText}</span>
                         </div>
                         <div style="display: flex; align-items: center;">
                             <div class="stats">
@@ -776,7 +779,8 @@
                 profit: currentCalc.profit,
                 roi: currentCalc.roi,
                 tBinance: currentCalc.tBinance,
-                tBcv: currentCalc.tBcv
+                tBcv: currentCalc.tBcv,
+                usdToBuy: currentCalc.usdToBuy
             };
 
             const history = JSON.parse(localStorage.getItem('bdt_history') || '[]');
