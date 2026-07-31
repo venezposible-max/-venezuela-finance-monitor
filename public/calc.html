@@ -625,13 +625,12 @@
             const startUsdt = totalVes / tasaBinance;
 
             // 2. Desglose de compra en BDT
-            // El banco bloquea el monto de compra + 0.5% de comisión de asignación.
-            // Para calcular los USD máximos que podemos comprar basándonos en el bloqueo:
-            // totalVes = USD * tasaBcv * 1.005 -> usdToBuyRaw = totalVes / (tasaBcv * 1.005)
-            const usdToBuyRaw = totalVes / (tasaBcv * 1.005);
+            // El presupuesto en Bolívares debe cubrir el monto de compra, el 0.5% de asignación y el 1% de recarga:
+            // totalVes = USD * tasaBcv * 1.015 -> usdToBuyRaw = totalVes / (tasaBcv * 1.015)
+            const usdToBuyRaw = totalVes / (tasaBcv * 1.015);
             
             // Redondear a 2 decimales para evitar imprecisiones de coma flotante (ej: 999.999 USD) 
-            // que harían que Math.floor lo bajara injustamente al múltiplo de 5 inferior (995 en vez de 1000)
+            // que harían que Math.floor lo bajara injustamente al múltiplo de 5 inferior
             const usdToBuyRawRounded = Math.round(usdToBuyRaw * 100) / 100;
             
             // El banco exige que los dólares comprados sean múltiplos de 5 USD (redondeando hacia abajo)
