@@ -340,6 +340,38 @@
         .clear-btn:hover {
             opacity: 0.8;
         }
+        .history-summary {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed var(--border);
+            border-radius: 14px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px 15px;
+        }
+        .history-summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .history-summary-item .label {
+            font-size: 10px;
+            color: var(--subtext);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .history-summary-item .value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .history-summary-item .value.green {
+            color: var(--green);
+        }
+        .history-summary-item .value.red {
+            color: var(--red);
+        }
         .history-list {
             display: flex;
             flex-direction: column;
@@ -571,6 +603,12 @@
                     🗑️ Borrar Historial
                 </button>
             </div>
+            
+            <!-- Resumen de Totales del Historial -->
+            <div id="history-summary" class="history-summary" style="display: none;">
+                <!-- Se rellena dinámicamente -->
+            </div>
+
             <div id="history-list" class="history-list">
                 <!-- Se rellena dinámicamente -->
             </div>
@@ -730,14 +768,54 @@
 
         function renderHistory() {
             const listEl = document.getElementById('history-list');
+            const summaryEl = document.getElementById('history-summary');
             const history = JSON.parse(localStorage.getItem('bdt_history') || '[]');
             
             if (history.length === 0) {
                 listEl.innerHTML = '<div class="empty-history">No hay operaciones registradas aún.</div>';
+                summaryEl.style.display = 'none';
                 return;
             }
 
             const fmt = (n) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Calcular acumulados
+            let totalUsdToBuy = 0;
+            let totalStart = 0;
+            let totalEnd = 0;
+            let totalProfit = 0;
+
+            history.forEach(item => {
+                totalUsdToBuy += (item.usdToBuy || 0);
+                totalStart += (item.start || 0);
+                totalEnd += (item.end || 0);
+                totalProfit += (item.profit || 0);
+            });
+
+            const overallRoi = totalStart > 0 ? (totalProfit / totalStart) * 100 : 0;
+            const profitSign = totalProfit >= 0 ? '+' : '';
+            const profitClass = totalProfit >= 0 ? 'green' : 'red';
+
+            // Actualizar panel de resumen
+            summaryEl.innerHTML = `
+                <div class="history-summary-item">
+                    <span class="label">Total Compra BDT</span>
+                    <span class="value" style="color: var(--green);">$${totalUsdToBuy.toLocaleString('es-VE')} USD</span>
+                </div>
+                <div class="history-summary-item">
+                    <span class="label">Inversión Total</span>
+                    <span class="value">${fmt(totalStart)} USDT</span>
+                </div>
+                <div class="history-summary-item">
+                    <span class="label">Retorno Total</span>
+                    <span class="value">${fmt(totalEnd)} USDT</span>
+                </div>
+                <div class="history-summary-item">
+                    <span class="label">Ganancia Acumulada</span>
+                    <span class="value ${profitClass}">${profitSign}${fmt(totalProfit)} USDT (${profitSign}${overallRoi.toFixed(2)}%)</span>
+                </div>
+            `;
+            summaryEl.style.display = 'grid';
 
             listEl.innerHTML = history.map(item => {
                 const profitClass = item.profit >= 0 ? 'profit' : 'profit loss';
